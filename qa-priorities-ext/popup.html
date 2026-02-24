@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>To-Do Priorities</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="toolbar">
+        <h1>To-Do Priorities</h1>
+        <button id="import-btn" class="btn">Import Priorities (.xlsx)</button>
+        <input id="file-input" type="file" accept=".xlsx,.xls" hidden />
+      </header>
+
+      <p id="status" class="status"></p>
+
+      <section class="table-wrap">
+        <table id="todo-table">
+          <thead>
+            <tr>
+              <th>Completed</th>
+              <th>Cut Time</th>
+              <th>UPC</th>
+              <th>Quantity</th>
+              <th>Current Location</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody id="todo-body">
+            <tr><td colspan="6" class="placeholder">Import a priorities file to begin.</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="vendor/xlsx.full.min.js"></script>
+    <script src="logic.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
