@@ -116,7 +116,7 @@ function renderTable() {
     });
     deleteCell.appendChild(deleteBtn);
 
-    row.append(checkboxCell, cutTimeCell, upcCell, qtyCell, locCell, deleteCell);
+    row.append(checkboxCell, locCell, upcCell, qtyCell, cutTimeCell, deleteCell);
     tbody.appendChild(row);
   });
 }
