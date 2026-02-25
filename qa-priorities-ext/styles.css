@@ -9,8 +9,8 @@
   --border: rgba(148, 163, 184, 0.2);
   --border-strong: rgba(148, 163, 184, 0.3);
   --header: #182236;
-  --accent: #7c3aed;
-  --accent-hover: #8b5cf6;
+  --accent: #000000;
+  --accent-hover: #111111;
   --success: #34d399;
   --danger: #fb7185;
 }
@@ -94,6 +94,13 @@ th, td {
   line-height: 1.2;
 }
 
+#todo-table th:nth-child(4),
+#todo-table td:nth-child(4),
+#todo-table th:nth-child(6),
+#todo-table td:nth-child(6) {
+  text-align: center;
+}
+
 tbody tr.completed {
   opacity: 0.75;
 }
@@ -107,7 +114,19 @@ tbody tr.completed td:not(:first-child):not(:last-child) {
   text-align: center;
 }
 
+.gtin-link-icon {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.gtin-link-icon:hover {
+  color: #ddd;
+  text-decoration: none;
+}
+
 .delete-btn {
+  display: block;
+  margin: 0 auto;
   border: 1px solid var(--danger);
   color: var(--danger);
   background: transparent;
