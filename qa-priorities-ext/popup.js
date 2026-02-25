@@ -7,13 +7,35 @@ if (!logic) {
 const { extractPrioritiesRows } = logic;
 
 const STORAGE_KEY = 'qa-priorities-todos-v1';
+const SETTINGS_STORAGE_KEY = 'qa-priorities-settings-v1';
+
+const DEFAULT_SETTINGS = {
+  groups: [
+    { title: 'pallets', values: ['a', 'b', 'c', 'lud', 'prm', 'slp'] },
+    { title: 'efg', values: ['e', 'f', 'g', 'gft', 'hvc', 'hwk', 'hvb'] },
+    { title: 'hjkl', values: ['h', 'j', 'k', 'l'] },
+    { title: 'mnst', values: ['m', 'n', 's', 't', 'mez'] },
+  ],
+};
+
+const views = {
+  main: document.getElementById('main-view'),
+  settings: document.getElementById('settings-view'),
+};
 
 const importBtn = document.getElementById('import-btn');
 const fileInput = document.getElementById('file-input');
 const statusEl = document.getElementById('status');
-const tbody = document.getElementById('todo-body');
+const groupedTables = document.getElementById('grouped-tables');
+const openSettingsBtn = document.getElementById('open-settings');
+const closeSettingsBtn = document.getElementById('close-settings');
+const settingsSaveBtn = document.getElementById('settings-save');
+const settingsResetBtn = document.getElementById('settings-reset');
+const addGroupBtn = document.getElementById('add-group');
+const groupsList = document.getElementById('groups-list');
 
 let tasksState = [];
+let settingsState = loadSettings();
 
 function getStorage() {
   if (window.chrome?.storage?.local) {
@@ -47,6 +69,462 @@ function setStatus(message, tone = '') {
   if (tone) statusEl.classList.add(tone);
 }
 
+function normalizeGroupValues(values) {
+  if (!Array.isArray(values)) return [];
+  const dedup = new Set();
+  values.forEach((value) => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (normalized) dedup.add(normalized);
+  });
+  return [...dedup];
+}
+
+function normalizeSettings(config) {
+  const groups = Array.isArray(config?.groups)
+    ? config.groups
+        .map((group) => {
+          const title = String(group?.title || '').trim();
+          const values = normalizeGroupValues(group?.values);
+          return title ? { title, values } : null;
+        })
+        .filter(Boolean)
+    : [];
+
+  if (!groups.length) {
+    return {
+      groups: DEFAULT_SETTINGS.groups.map((group) => ({
+        title: group.title,
+        values: normalizeGroupValues(group.values),
+      })),
+    };
+  }
+
+  return { groups };
+}
+
+function loadSettings() {
+  const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+  if (!raw) return normalizeSettings(DEFAULT_SETTINGS);
+  try {
+    return normalizeSettings(JSON.parse(raw));
+  } catch (err) {
+    console.warn('Failed to load settings, falling back to defaults.', err);
+    return normalizeSettings(DEFAULT_SETTINGS);
+  }
+}
+
+function saveSettings(config) {
+  settingsState = normalizeSettings(config);
+  window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settingsState));
+}
+
+function showView(viewKey) {
+  Object.values(views).forEach((view) => view.classList.add('hidden'));
+  views[viewKey].classList.remove('hidden');
+}
+
+function parseGroupValues(raw) {
+  const text = String(raw || '');
+  return normalizeGroupValues(
+    text
+      .split(/[\s,]+/)
+      .map((part) => part.trim())
+      .filter(Boolean),
+  );
+}
+
+function populateSettingsUI(config) {
+  groupsList.replaceChildren();
+  config.groups.forEach((group) => {
+    addGroupToUI(group.title, group.values);
+  });
+}
+
+function createChevronIcon(direction) {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('move-icon');
+
+  const path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-linecap', 'butt');
+  path.setAttribute('stroke-linejoin', 'miter');
+  path.setAttribute('stroke-width', '2.25');
+  path.setAttribute(
+    'd',
+    direction === 'up' ? 'M4.5 15L12 7.5L19.5 15' : 'M4.5 9L12 16.5L19.5 9',
+  );
+
+  svg.appendChild(path);
+  return svg;
+}
+
+function createXIcon(className = 'close-icon') {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add(className);
+
+  const path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  path.setAttribute('stroke-width', '2');
+  path.setAttribute('d', 'M18 6L6 18M6 6l12 12');
+
+  svg.appendChild(path);
+  return svg;
+}
+
+function createGearIcon() {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('toolbar-icon');
+
+  const circle = document.createElementNS(svgNS, 'circle');
+  circle.setAttribute('cx', '12');
+  circle.setAttribute('cy', '12');
+  circle.setAttribute('r', '3');
+  circle.setAttribute('fill', 'none');
+  circle.setAttribute('stroke', 'currentColor');
+  circle.setAttribute('stroke-width', '2');
+  svg.appendChild(circle);
+
+  const path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  path.setAttribute('stroke-width', '2');
+  path.setAttribute(
+    'd',
+    'M12 2.75v2.5M12 18.75v2.5M2.75 12h2.5M18.75 12h2.5M5.45 5.45l1.8 1.8M16.75 16.75l1.8 1.8M18.55 5.45l-1.8 1.8M7.25 16.75l-1.8 1.8',
+  );
+  svg.appendChild(path);
+  return svg;
+}
+
+function applyStaticIcons() {
+  openSettingsBtn?.replaceChildren(createGearIcon());
+  closeSettingsBtn?.replaceChildren(createXIcon('toolbar-icon'));
+}
+
+function addGroupToUI(title = '', values = []) {
+  const groupItem = document.createElement('div');
+  groupItem.className = 'group-item';
+
+  const fields = document.createElement('div');
+  fields.className = 'group-fields';
+
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.className = 'group-title-input';
+  titleInput.placeholder = 'Column title';
+  titleInput.value = title;
+
+  const valuesInput = document.createElement('input');
+  valuesInput.type = 'text';
+  valuesInput.className = 'group-values-input';
+  valuesInput.placeholder = 'Values (A B C or MEZ PRM HVC)';
+  valuesInput.value = Array.isArray(values) ? values.join(', ') : String(values || '');
+
+  fields.append(titleInput, valuesInput);
+
+  const moveControls = document.createElement('div');
+  moveControls.className = 'group-move-controls';
+
+  const moveUpBtn = document.createElement('button');
+  moveUpBtn.type = 'button';
+  moveUpBtn.className = 'icon-btn move-group';
+  moveUpBtn.title = 'Move up';
+  moveUpBtn.appendChild(createChevronIcon('up'));
+  moveUpBtn.addEventListener('click', () => {
+    const prev = groupItem.previousElementSibling;
+    if (prev) groupsList.insertBefore(groupItem, prev);
+  });
+
+  const moveDownBtn = document.createElement('button');
+  moveDownBtn.type = 'button';
+  moveDownBtn.className = 'icon-btn move-group';
+  moveDownBtn.title = 'Move down';
+  moveDownBtn.appendChild(createChevronIcon('down'));
+  moveDownBtn.addEventListener('click', () => {
+    const next = groupItem.nextElementSibling;
+    if (next) groupsList.insertBefore(next, groupItem);
+  });
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'icon-btn remove-group';
+  removeBtn.title = 'Remove column';
+  removeBtn.appendChild(createXIcon());
+  removeBtn.addEventListener('click', () => {
+    groupItem.remove();
+  });
+
+  moveControls.append(moveUpBtn, moveDownBtn);
+  groupItem.append(moveControls, fields, removeBtn);
+
+  groupsList.appendChild(groupItem);
+}
+
+function getSettingsFromUI() {
+  const groups = [];
+  groupsList.querySelectorAll('.group-item').forEach((item) => {
+    const title = item.querySelector('.group-title-input')?.value.trim();
+    const values = parseGroupValues(item.querySelector('.group-values-input')?.value);
+    if (title) groups.push({ title, values });
+  });
+  return { groups };
+}
+
+function openSettings() {
+  populateSettingsUI(settingsState);
+  showView('settings');
+}
+
+function closeSettings() {
+  showView('main');
+}
+
+function saveSettingsFromUI() {
+  const config = getSettingsFromUI();
+  if (!config.groups.length) {
+    alert('Add at least one column group.');
+    return;
+  }
+  saveSettings(config);
+  renderTables();
+  setStatus('Settings saved.', 'success');
+  closeSettings();
+}
+
+function resetSettings() {
+  populateSettingsUI(settingsState);
+}
+
+function getNormalizedLocation(task) {
+  return String(task.currentLocation || '').trim().toUpperCase();
+}
+
+function taskMatchesGroup(task, group) {
+  const location = getNormalizedLocation(task);
+  if (!location) return false;
+  if (!group.values.length) return false;
+
+  return group.values.some((value) => {
+    const token = value.toUpperCase();
+    return (
+      location === token
+      || location.startsWith(`${token}:`)
+      || location.includes(`:${token}:`)
+      || location.includes(`:${token}.`)
+      || location.includes(`.${token}.`)
+      || location.endsWith(`:${token}`)
+      || location.endsWith(`.${token}`)
+    );
+  });
+}
+
+function groupTasksBySettings() {
+  const groups = settingsState.groups.map((group) => ({
+    title: group.title,
+    values: group.values,
+    tasks: [],
+  }));
+
+  const ungrouped = {
+    title: 'Other',
+    values: [],
+    tasks: [],
+  };
+
+  tasksState.forEach((task) => {
+    const matched = groups.find((group) => taskMatchesGroup(task, group));
+    if (matched) {
+      matched.tasks.push(task);
+    } else {
+      ungrouped.tasks.push(task);
+    }
+  });
+
+  const withTasks = groups.filter((group) => group.tasks.length > 0);
+  if (ungrouped.tasks.length > 0) {
+    withTasks.push(ungrouped);
+  }
+  return withTasks;
+}
+
+function makeCell(content = '') {
+  const cell = document.createElement('td');
+  cell.textContent = content;
+  return cell;
+}
+
+async function removeTaskById(taskId) {
+  tasksState = tasksState.filter((task) => task.id !== taskId);
+  await persistAndRender('Removed to-do row.', 'success');
+}
+
+async function removeGroupTasks(groupTitle) {
+  const before = tasksState.length;
+  tasksState = tasksState.filter((task) => {
+    const grouped = settingsState.groups.find((group) => group.title === groupTitle);
+    if (!grouped) return true;
+    return !taskMatchesGroup(task, grouped);
+  });
+
+  const removed = before - tasksState.length;
+  if (!removed) {
+    setStatus(`No rows removed from ${groupTitle}.`);
+    return;
+  }
+  await persistAndRender(`Removed ${removed} to-dos from ${groupTitle}.`, 'success');
+}
+
+function renderTaskRow(task) {
+  const row = document.createElement('tr');
+  if (task.completed) row.classList.add('completed');
+
+  const checkboxCell = document.createElement('td');
+  checkboxCell.className = 'cell-center';
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = Boolean(task.completed);
+  checkbox.addEventListener('change', async () => {
+    task.completed = checkbox.checked;
+    await persistAndRender('Updated completion state.', 'success');
+  });
+  checkboxCell.appendChild(checkbox);
+
+  const locCell = makeCell(task.currentLocation || '');
+
+  const upcCell = makeCell(task.upc || '');
+  if (task.upc) {
+    const gtinLinkIcon = document.createElement('a');
+    gtinLinkIcon.href = `https://atom.walmart.com/item-management/all-about-an-item?gtin=${encodeURIComponent(task.upc)}`;
+    gtinLinkIcon.target = '_blank';
+    gtinLinkIcon.rel = 'noopener noreferrer';
+    gtinLinkIcon.className = 'gtin-link-icon';
+    gtinLinkIcon.textContent = '🔗';
+    gtinLinkIcon.setAttribute('aria-label', `Open ${task.upc} in Item Management`);
+    gtinLinkIcon.title = 'Open in Item Management';
+    upcCell.append(' ', gtinLinkIcon);
+  }
+
+  const qtyCell = makeCell(task.quantity || '');
+  const cutTimeCell = makeCell(task.cutTimeDisplay || '');
+
+  const deleteCell = document.createElement('td');
+  deleteCell.className = 'cell-center';
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.textContent = '×';
+  deleteBtn.title = 'Remove to-do';
+  deleteBtn.addEventListener('click', async () => {
+    await removeTaskById(task.id);
+  });
+  deleteCell.appendChild(deleteBtn);
+
+  row.append(checkboxCell, locCell, upcCell, qtyCell, cutTimeCell, deleteCell);
+  return row;
+}
+
+function renderGroupTable(group) {
+  const card = document.createElement('section');
+  card.className = 'group-table-card';
+
+  const header = document.createElement('div');
+  header.className = 'group-table-header';
+
+  const heading = document.createElement('h3');
+  heading.textContent = `${group.title} (${group.tasks.length})`;
+
+  const removeTableBtn = document.createElement('button');
+  removeTableBtn.type = 'button';
+  removeTableBtn.className = 'delete-table-btn';
+  removeTableBtn.title = `Remove all rows in ${group.title}`;
+  removeTableBtn.appendChild(createXIcon('close-icon'));
+  removeTableBtn.addEventListener('click', async () => {
+    if (group.title === 'Other') {
+      const ids = new Set(group.tasks.map((task) => task.id));
+      tasksState = tasksState.filter((task) => !ids.has(task.id));
+      await persistAndRender(`Removed ${ids.size} to-dos from Other.`, 'success');
+      return;
+    }
+    await removeGroupTasks(group.title);
+  });
+
+  header.append(heading, removeTableBtn);
+
+  const wrap = document.createElement('section');
+  wrap.className = 'table-wrap grouped';
+
+  const table = document.createElement('table');
+  table.className = 'todo-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th aria-label="Completed"></th>
+        <th>Location</th>
+        <th>UPC</th>
+        <th>Quantity</th>
+        <th>Cut Time</th>
+        <th>Remove</th>
+      </tr>
+    </thead>
+  `;
+
+  const body = document.createElement('tbody');
+  group.tasks.forEach((task) => {
+    body.appendChild(renderTaskRow(task));
+  });
+
+  table.appendChild(body);
+  wrap.appendChild(table);
+
+  card.append(header, wrap);
+  return card;
+}
+
+function renderTables() {
+  groupedTables.replaceChildren();
+
+  if (!tasksState.length) {
+    const placeholder = document.createElement('section');
+    placeholder.className = 'table-wrap';
+    placeholder.innerHTML = `
+      <table class="todo-table">
+        <tbody>
+          <tr>
+            <td colspan="6" class="placeholder">Import a priorities file to begin.</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    groupedTables.appendChild(placeholder);
+    return;
+  }
+
+  const groupsWithTasks = groupTasksBySettings();
+  groupsWithTasks.forEach((group) => {
+    groupedTables.appendChild(renderGroupTable(group));
+  });
+}
+
+async function persistAndRender(statusMessage, tone) {
+  await storage.set(STORAGE_KEY, tasksState);
+  renderTables();
+  if (statusMessage) setStatus(statusMessage, tone);
+}
+
 async function readXlsxRows(file) {
   if (!window.XLSX?.read || !window.XLSX?.utils?.sheet_to_json) {
     throw new Error('XLSX parser not available.');
@@ -67,77 +545,6 @@ async function readXlsxRows(file) {
   });
 }
 
-function renderTable() {
-  tbody.replaceChildren();
-
-  if (!tasksState.length) {
-    const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="6" class="placeholder">No to-do rows loaded.</td>';
-    tbody.appendChild(row);
-    return;
-  }
-
-  tasksState.forEach((task) => {
-    const row = document.createElement('tr');
-    if (task.completed) row.classList.add('completed');
-
-    const checkboxCell = document.createElement('td');
-    checkboxCell.className = 'cell-center';
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = Boolean(task.completed);
-    checkbox.addEventListener('change', async () => {
-      task.completed = checkbox.checked;
-      await persistAndRender('Updated completion state.', 'success');
-    });
-    checkboxCell.appendChild(checkbox);
-
-    const cutTimeCell = document.createElement('td');
-    cutTimeCell.textContent = task.cutTimeDisplay || '';
-
-    const upcCell = document.createElement('td');
-    upcCell.textContent = task.upc || '';
-    if (task.upc) {
-      const gtinLinkIcon = document.createElement('a');
-      gtinLinkIcon.href = `https://atom.walmart.com/item-management/all-about-an-item?gtin=${encodeURIComponent(task.upc)}`;
-      gtinLinkIcon.target = '_blank';
-      gtinLinkIcon.rel = 'noopener noreferrer';
-      gtinLinkIcon.className = 'gtin-link-icon';
-      gtinLinkIcon.textContent = '🔗';
-      gtinLinkIcon.setAttribute('aria-label', `Open ${task.upc} in Item Management`);
-      gtinLinkIcon.title = 'Open in Item Management';
-      upcCell.append(' ', gtinLinkIcon);
-    }
-
-    const qtyCell = document.createElement('td');
-    qtyCell.textContent = task.quantity || '';
-
-    const locCell = document.createElement('td');
-    locCell.textContent = task.currentLocation || '';
-
-    const deleteCell = document.createElement('td');
-    deleteCell.className = 'cell-center';
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.textContent = '×';
-    deleteBtn.title = 'Remove to-do';
-    deleteBtn.addEventListener('click', async () => {
-      tasksState = tasksState.filter((candidate) => candidate.id !== task.id);
-      await persistAndRender('Removed to-do row.', 'success');
-    });
-    deleteCell.appendChild(deleteBtn);
-
-    row.append(checkboxCell, locCell, upcCell, qtyCell, cutTimeCell, deleteCell);
-    tbody.appendChild(row);
-  });
-}
-
-async function persistAndRender(statusMessage, tone) {
-  await storage.set(STORAGE_KEY, tasksState);
-  renderTable();
-  if (statusMessage) setStatus(statusMessage, tone);
-}
-
 async function importFile(file) {
   if (!file) return;
   setStatus(`Reading ${file.name}...`);
@@ -151,14 +558,20 @@ async function importFile(file) {
 }
 
 async function init() {
+  applyStaticIcons();
   const saved = await storage.get(STORAGE_KEY);
   if (Array.isArray(saved)) {
     tasksState = saved;
-    renderTable();
   }
+  renderTables();
 }
 
 importBtn?.addEventListener('click', () => fileInput?.click());
+openSettingsBtn?.addEventListener('click', openSettings);
+closeSettingsBtn?.addEventListener('click', closeSettings);
+settingsSaveBtn?.addEventListener('click', saveSettingsFromUI);
+settingsResetBtn?.addEventListener('click', resetSettings);
+addGroupBtn?.addEventListener('click', () => addGroupToUI());
 
 fileInput?.addEventListener('change', async (event) => {
   try {
