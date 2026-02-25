@@ -97,6 +97,17 @@ function renderTable() {
 
     const upcCell = document.createElement('td');
     upcCell.textContent = task.upc || '';
+    if (task.upc) {
+      const gtinLinkIcon = document.createElement('a');
+      gtinLinkIcon.href = `https://atom.walmart.com/item-management/all-about-an-item?gtin=${encodeURIComponent(task.upc)}`;
+      gtinLinkIcon.target = '_blank';
+      gtinLinkIcon.rel = 'noopener noreferrer';
+      gtinLinkIcon.className = 'gtin-link-icon';
+      gtinLinkIcon.textContent = '🔗';
+      gtinLinkIcon.setAttribute('aria-label', `Open ${task.upc} in Item Management`);
+      gtinLinkIcon.title = 'Open in Item Management';
+      upcCell.append(' ', gtinLinkIcon);
+    }
 
     const qtyCell = document.createElement('td');
     qtyCell.textContent = task.quantity || '';
@@ -116,7 +127,7 @@ function renderTable() {
     });
     deleteCell.appendChild(deleteBtn);
 
-    row.append(checkboxCell, cutTimeCell, upcCell, qtyCell, locCell, deleteCell);
+    row.append(checkboxCell, locCell, upcCell, qtyCell, cutTimeCell, deleteCell);
     tbody.appendChild(row);
   });
 }
