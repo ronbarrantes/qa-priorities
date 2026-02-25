@@ -13,6 +13,9 @@
   --accent-hover: #111111;
   --success: #34d399;
   --danger: #fb7185;
+  --primary: #e5e7eb;
+  --primary-text: #0b0f17;
+  --radius-sm: 10px;
 }
 
 * {
@@ -43,16 +46,32 @@ body {
 }
 
 .btn {
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
-  border-radius: 8px;
-  padding: 7px 11px;
+  border: 1px solid var(--border);
+  background: var(--header);
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
   cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: none;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .btn:hover {
-  background: var(--accent-hover);
+  background: #202b44;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16);
 }
 
 .status {
@@ -130,12 +149,30 @@ tbody tr.completed td:not(:first-child):not(:last-child) {
   border: 1px solid var(--danger);
   color: var(--danger);
   background: transparent;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   width: 22px;
   height: 22px;
   line-height: 1;
   padding: 0;
+  font-weight: 600;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.delete-btn:hover {
+  background: rgba(251, 113, 133, 0.12);
+}
+
+.delete-btn:active {
+  transform: translateY(1px);
+}
+
+.delete-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16);
 }
 
 .placeholder {
