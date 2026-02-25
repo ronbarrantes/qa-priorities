@@ -8,34 +8,37 @@
   </head>
   <body>
     <main class="app">
-      <header class="toolbar">
-        <h1>To-Do Priorities</h1>
-        <button id="import-btn" class="btn">Import Priorities (.xlsx)</button>
-        <input id="file-input" type="file" accept=".xlsx,.xls" hidden />
-      </header>
+      <section id="main-view" class="view-shell">
+        <header class="toolbar">
+          <h1>To-Do Priorities</h1>
+          <div class="toolbar-actions">
+            <button id="import-btn" class="btn">Import Priorities (.xlsx)</button>
+            <button id="open-settings" class="btn icon-btn" title="Settings">⚙️</button>
+          </div>
+          <input id="file-input" type="file" accept=".xlsx,.xls" hidden />
+        </header>
 
-      <p id="status" class="status"></p>
+        <p id="status" class="status"></p>
 
-      <section class="table-wrap">
-        <table id="todo-table">
-          <thead>
-            <tr>
-              <th aria-label="Completed"></th>
-              <th>Location</th>
-              <th>UPC</th>
-              <th>Quantity</th>
-              <th>Cut Time</th>
-              <th>Remove</th>
-            </tr>
-          </thead>
-          <tbody id="todo-body">
-            <tr>
-              <td colspan="6" class="placeholder">
-                Import a priorities file to begin.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div id="grouped-tables" class="tables-stack"></div>
+      </section>
+
+      <section id="settings-view" class="view-shell hidden" aria-live="polite">
+        <div class="section-header">
+          <h2>Settings</h2>
+          <button id="close-settings" type="button" class="icon-btn" title="Back to to-dos">✕</button>
+        </div>
+
+        <p class="helper">Create columns, rename titles, and set the letter mappings.</p>
+
+        <div id="groups-list" class="groups-list"></div>
+
+        <button id="add-group" type="button" class="secondary">Add Column</button>
+
+        <div class="buttons">
+          <button id="settings-reset" type="button" class="secondary">Reset</button>
+          <button id="settings-save" type="button">Save</button>
+        </div>
       </section>
     </main>
 
