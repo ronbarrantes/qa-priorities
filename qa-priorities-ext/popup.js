@@ -314,23 +314,44 @@ function getNormalizedLocation(task) {
   return String(task.currentLocation || '').trim().toUpperCase();
 }
 
+function extractLetterPrefix(location) {
+  const idx = location.indexOf(':');
+  if (idx === -1) return '';
+
+  const afterColon = location.slice(idx + 1);
+  const match = afterColon.match(/^[A-Z]+/);
+  return match ? match[0] : '';
+}
+
+function getLocationGroupKey(location, validKeys) {
+  const prefix = extractLetterPrefix(location);
+  if (!prefix) return null;
+
+  const prefixLower = prefix.toLowerCase();
+  const lettersOnly = /^[A-Z]+$/;
+
+  if (prefix.length >= 3 && lettersOnly.test(prefix) && validKeys.has(prefixLower)) {
+    return prefixLower;
+  }
+
+  if (prefix.length >= 2) {
+    const firstLetter = prefixLower[0];
+    if (validKeys.has(firstLetter)) {
+      return firstLetter;
+    }
+  }
+
+  return null;
+}
+
 function taskMatchesGroup(task, group) {
   const location = getNormalizedLocation(task);
   if (!location) return false;
   if (!group.values.length) return false;
 
-  return group.values.some((value) => {
-    const token = value.toUpperCase();
-    return (
-      location === token
-      || location.startsWith(`${token}:`)
-      || location.includes(`:${token}:`)
-      || location.includes(`:${token}.`)
-      || location.includes(`.${token}.`)
-      || location.endsWith(`:${token}`)
-      || location.endsWith(`.${token}`)
-    );
-  });
+  const validKeys = new Set(group.values.map((value) => String(value || '').trim().toLowerCase()));
+  const key = getLocationGroupKey(location, validKeys);
+  return key !== null;
 }
 
 function groupTasksBySettings() {
