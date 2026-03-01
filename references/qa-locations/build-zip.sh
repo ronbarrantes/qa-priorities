@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 EXT_DIR="$ROOT_DIR/qa-locations-ext"
 OUTPUT_DIR="$ROOT_DIR/dist"
-OUTPUT_FILE="$OUTPUT_DIR/qa-locations-mvp.zip"
+OUTPUT_FILE="$OUTPUT_DIR/qa-locations.zip"
 
 mkdir -p "$OUTPUT_DIR"
 rm -f "$OUTPUT_FILE"

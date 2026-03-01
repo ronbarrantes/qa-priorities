@@ -150,6 +150,12 @@ h2 {
   gap: 4px;
 }
 
+.input-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .import-btn {
   justify-self: start;
 }
@@ -289,6 +295,10 @@ select:focus {
   border-radius: var(--radius-sm);
   background: var(--surface);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.settings-toggle .checkbox + .checkbox {
+  margin-top: 8px;
 }
 
 .checkbox input[type="checkbox"] {
@@ -513,8 +523,17 @@ td.gap {
   border: 1px solid #d3d3d3;
 }
 
-td.priority {
-  background: #fafa5d;
-  color: #000;
-  font-weight: 400;
+td.priority-red {
+  background: #ffbfb3;
+  color: #111111;
+}
+
+td.priority-yellow {
+  background: #ffff8c;
+  color: #111111;
+}
+
+td.priority-green {
+  background: #adffad;
+  color: #111111;
 }

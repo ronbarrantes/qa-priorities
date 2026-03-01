@@ -1,24 +1,26 @@
 (function (global, factory) {
-  if (typeof module === 'object' && module.exports) {
+  if (typeof module === "object" && module.exports) {
     module.exports = factory();
   } else {
     global.QALogic = factory();
   }
-})(typeof window !== 'undefined' ? window : globalThis, function () {
+})(typeof window !== "undefined" ? window : globalThis, function () {
   const IGNORED_PASTE_LINES = new Set([
-    'LOCATION',
-    'CONTAINERS',
-    'CURRENT LOCATION',
-    'CONTAINER ID',
-    'CONTAINER TAG',
+    "LOCATION",
+    "CONTAINERS",
+    "CURRENT LOCATION",
+    "CONTAINER ID",
+    "CONTAINER TAG",
   ]);
-  const CSV_LOCATION_COLUMN = 'Location';
-  const XLSX_CONTAINER_TAG_COLUMN = 'Container Tag';
-  const XLSX_CURRENT_LOCATION_COLUMN = 'Current Location';
-  const QA_HOLD_PICKING_TAG = 'QA_HOLD_PICKING';
+  const CSV_LOCATION_COLUMN = "Location";
+  const XLSX_CONTAINER_TAG_COLUMN = "Container Tag";
+  const XLSX_CURRENT_LOCATION_COLUMN = "Current Location";
+  const XLSX_EARLIEST_CUT_TIME_COLUMN = "Earliest Cut-time";
+  const XLSX_CUT_TIME_COLUMN = "Cut Time";
+  const QA_HOLD_PICKING_TAG = "QA_HOLD_PICKING";
 
   function parseLines(raw) {
-    return String(raw || '')
+    return String(raw || "")
       .split(/\r?\n/)
       .map((item) => item.trim())
       .filter(Boolean)
@@ -26,15 +28,32 @@
   }
 
   function tokenize(value) {
-    return value
-      .toUpperCase()
-      .match(/[A-Z]+|\d+|[^A-Z\d]+/g)
-      ?.map((chunk) => (/^\d+$/.test(chunk) ? Number(chunk) : chunk)) ?? [value];
+    return (
+      value
+        .toUpperCase()
+        .match(/[A-Z]+|\d+|[^A-Z\d]+/g)
+        ?.map((chunk) => (/^\d+$/.test(chunk) ? Number(chunk) : chunk)) ?? [
+        value,
+      ]
+    );
+  }
+
+  function sortableLocationKey(location) {
+    const value = String(location ?? "");
+    const idx = value.indexOf(":");
+    if (idx === -1) return value;
+    return value.slice(idx + 1);
+  }
+
+  function normalizeLocationKey(location) {
+    return String(location || "")
+      .trim()
+      .toUpperCase();
   }
 
   function compareLocationCodes(a, b) {
-    const partsA = tokenize(a);
-    const partsB = tokenize(b);
+    const partsA = tokenize(sortableLocationKey(a));
+    const partsB = tokenize(sortableLocationKey(b));
     const max = Math.max(partsA.length, partsB.length);
 
     for (let i = 0; i < max; i += 1) {
@@ -43,7 +62,7 @@
       if (left === undefined) return -1;
       if (right === undefined) return 1;
 
-      if (typeof left === 'number' && typeof right === 'number') {
+      if (typeof left === "number" && typeof right === "number") {
         if (left !== right) return left - right;
         continue;
       }
@@ -72,7 +91,7 @@
       return raw.map((value) => String(value).trim()).filter(Boolean);
     }
 
-    return String(raw || '')
+    return String(raw || "")
       .split(/[\s,]+/)
       .map((value) => value.trim())
       .filter(Boolean);
@@ -80,17 +99,15 @@
 
   function normalizeImportedLocations(values) {
     return uniqueCaseInsensitive(
-      (values || [])
-        .map((value) => String(value || '').trim())
-        .filter(Boolean),
+      (values || []).map((value) => String(value || "").trim()).filter(Boolean),
     ).sort(compareLocationCodes);
   }
 
   function parseCSVRows(rawText) {
-    const text = String(rawText || '');
+    const text = String(rawText || "");
     const rows = [];
     let row = [];
-    let field = '';
+    let field = "";
     let inQuotes = false;
 
     for (let i = 0; i < text.length; i += 1) {
@@ -116,21 +133,21 @@
         continue;
       }
 
-      if (char === ',') {
+      if (char === ",") {
         row.push(field);
-        field = '';
+        field = "";
         continue;
       }
 
-      if (char === '\n') {
+      if (char === "\n") {
         row.push(field);
         rows.push(row);
         row = [];
-        field = '';
+        field = "";
         continue;
       }
 
-      if (char === '\r') {
+      if (char === "\r") {
         continue;
       }
 
@@ -143,29 +160,31 @@
     }
 
     if (rows.length && rows[0].length) {
-      rows[0][0] = String(rows[0][0]).replace(/^\uFEFF/, '');
+      rows[0][0] = String(rows[0][0]).replace(/^\uFEFF/, "");
     }
 
     return rows;
   }
 
   function getColumnIndex(headers, columnName) {
-    return (headers || []).findIndex((header) => String(header || '').trim() === columnName);
+    return (headers || []).findIndex(
+      (header) => String(header || "").trim() === columnName,
+    );
   }
 
   function extractLocationsFromCSVText(csvText) {
     const rows = parseCSVRows(csvText);
     if (!rows.length) {
-      throw new Error('CSV file is empty.');
+      throw new Error("CSV file is empty.");
     }
 
-    const headers = rows[0].map((cell) => String(cell || '').trim());
+    const headers = rows[0].map((cell) => String(cell || "").trim());
     const locationIdx = getColumnIndex(headers, CSV_LOCATION_COLUMN);
     if (locationIdx === -1) {
       throw new Error(`CSV column "${CSV_LOCATION_COLUMN}" not found.`);
     }
 
-    const values = rows.slice(1).map((row) => row[locationIdx] ?? '');
+    const values = rows.slice(1).map((row) => row[locationIdx] ?? "");
     return {
       values: normalizeImportedLocations(values),
       rowCount: Math.max(0, rows.length - 1),
@@ -174,10 +193,10 @@
 
   function extractPrioritiesFromXlsxRows(rows) {
     if (!Array.isArray(rows) || rows.length === 0) {
-      throw new Error('Excel file is empty.');
+      throw new Error("Excel file is empty.");
     }
 
-    const headers = rows[0].map((cell) => String(cell || '').trim());
+    const headers = rows[0].map((cell) => String(cell || "").trim());
     const tagIdx = getColumnIndex(headers, XLSX_CONTAINER_TAG_COLUMN);
     if (tagIdx === -1) {
       throw new Error(`Excel column "${XLSX_CONTAINER_TAG_COLUMN}" not found.`);
@@ -185,44 +204,139 @@
 
     const locationIdx = getColumnIndex(headers, XLSX_CURRENT_LOCATION_COLUMN);
     if (locationIdx === -1) {
-      throw new Error(`Excel column "${XLSX_CURRENT_LOCATION_COLUMN}" not found.`);
+      throw new Error(
+        `Excel column "${XLSX_CURRENT_LOCATION_COLUMN}" not found.`,
+      );
     }
 
-    const priorityValues = [];
+    const cutTimeIdx =
+      getColumnIndex(headers, XLSX_EARLIEST_CUT_TIME_COLUMN) !== -1
+        ? getColumnIndex(headers, XLSX_EARLIEST_CUT_TIME_COLUMN)
+        : getColumnIndex(headers, XLSX_CUT_TIME_COLUMN);
+
+    const prioritiesByLocation = new Map();
     rows.slice(1).forEach((row) => {
-      const tag = String(row[tagIdx] ?? '').trim();
+      const tag = String(row[tagIdx] ?? "").trim();
       if (tag !== QA_HOLD_PICKING_TAG) return;
 
-      const location = String(row[locationIdx] ?? '').trim();
-      if (location) {
-        priorityValues.push(location);
+      const location = String(row[locationIdx] ?? "").trim();
+      if (!location) return;
+
+      const cutTime = parseCutTimeValue(
+        cutTimeIdx === -1 ? undefined : row[cutTimeIdx],
+      );
+      const key = normalizeLocationKey(location);
+      const prev = prioritiesByLocation.get(key);
+      if (!prev) {
+        prioritiesByLocation.set(key, { location, cutTime });
+        return;
+      }
+
+      if (cutTime && (!prev.cutTime || cutTime < prev.cutTime)) {
+        prioritiesByLocation.set(key, { location, cutTime });
       }
     });
 
+    const entries = Array.from(prioritiesByLocation.values()).sort((a, b) =>
+      compareLocationCodes(a.location, b.location),
+    );
+
     return {
-      values: normalizeImportedLocations(priorityValues),
+      values: entries.map((entry) => entry.location),
+      entries,
       rowCount: Math.max(0, rows.length - 1),
     };
   }
 
+  function parseCutTimeValue(value) {
+    if (value == null || value === "") return null;
+
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value.toISOString();
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const excelEpochUtcMs = Date.UTC(1899, 11, 30);
+      const utcMs = excelEpochUtcMs + Math.round(value * 24 * 60 * 60 * 1000);
+      const date = new Date(utcMs);
+      return Number.isNaN(date.getTime()) ? null : date.toISOString();
+    }
+
+    const text = String(value).trim();
+    if (!text) return null;
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  function buildPriorityToneByLocation(
+    locations,
+    priorityEntries,
+    now = new Date(),
+    colorsMode = true,
+  ) {
+    const locationSet = new Set(
+      (locations || []).map((loc) => normalizeLocationKey(loc)),
+    );
+    const toneMap = new Map();
+
+    if (!colorsMode) {
+      (priorityEntries || []).forEach((entry) => {
+        const location = String(entry?.location || "").trim();
+        const key = normalizeLocationKey(location);
+        if (!location || !locationSet.has(key)) return;
+        toneMap.set(key, "priority-yellow");
+      });
+      return toneMap;
+    }
+
+    const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
+
+    (priorityEntries || []).forEach((entry) => {
+      const location = String(entry?.location || "").trim();
+      const key = normalizeLocationKey(location);
+      if (!location || !locationSet.has(key)) return;
+
+      const cutTimeIso = entry?.cutTime;
+      if (!cutTimeIso) return;
+      const cutMs = new Date(cutTimeIso).getTime();
+      if (Number.isNaN(cutMs) || Number.isNaN(nowMs)) return;
+
+      const deltaMs = cutMs - nowMs;
+      if (deltaMs <= 2 * 60 * 60 * 1000) {
+        toneMap.set(key, "priority-red");
+      } else if (deltaMs <= 5 * 60 * 60 * 1000) {
+        toneMap.set(key, "priority-yellow");
+      } else {
+        toneMap.set(key, "priority-green");
+      }
+    });
+
+    return toneMap;
+  }
+
   function extractLetterPrefix(location) {
-    const idx = location.indexOf(':');
-    if (idx === -1) return '';
+    const idx = location.indexOf(":");
+    if (idx === -1) return "";
     const afterColon = location.slice(idx + 1);
     const match = afterColon.match(/^[A-Za-z]+/);
-    return match ? match[0] : '';
+    return match ? match[0] : "";
   }
 
   function normalizeConfig(config) {
-    const groups = (config?.groups || []).map((group) => ({
-      title: String(group.title || '').trim(),
-      values: parseGroupValues(group.values),
-    })).filter((group) => group.title);
+    const groups = (config?.groups || [])
+      .map((group) => ({
+        title: String(group.title || "").trim(),
+        values: parseGroupValues(group.values),
+      }))
+      .filter((group) => group.title);
 
     return {
       groups,
       maxRows: Number.isFinite(config?.maxRows) ? Number(config.maxRows) : 20,
-      columnGap: Number.isFinite(config?.columnGap) ? Number(config.columnGap) : 1,
+      columnGap: Number.isFinite(config?.columnGap)
+        ? Number(config.columnGap)
+        : 1,
+      colorsMode: config?.colorsMode === true ? true : false,
     };
   }
 
@@ -243,8 +357,6 @@
     });
     grouped.unassigned = [];
 
-    const lettersOnly = /^[A-Za-z]+$/;
-
     locations.forEach((loc) => {
       const prefix = extractLetterPrefix(loc);
       if (!prefix) {
@@ -255,14 +367,12 @@
       const prefixLower = prefix.toLowerCase();
       let assigned = false;
 
-      if (prefix.length >= 3 && lettersOnly.test(prefix)) {
-        if (validKeys.has(prefixLower)) {
-          grouped[prefixLower].push(loc);
-          assigned = true;
-        }
+      if (validKeys.has(prefixLower)) {
+        grouped[prefixLower].push(loc);
+        assigned = true;
       }
 
-      if (!assigned && prefix.length >= 2) {
+      if (!assigned && prefix.length >= 1) {
         const firstLetter = prefixLower[0];
         if (validKeys.has(firstLetter)) {
           grouped[firstLetter].push(loc);
@@ -318,7 +428,7 @@
     });
 
     if (groupedByTitle.unassigned?.length) {
-      groupTitles.push('unassigned');
+      groupTitles.push("unassigned");
     }
 
     const groupColumns = groupTitles.map((title) =>
@@ -345,7 +455,7 @@
       }
       if (index < groupTitles.length - 1) {
         for (let g = 0; g < columnGap; g += 1) {
-          headers.push('');
+          headers.push("");
         }
       }
     });
@@ -362,12 +472,12 @@
           if (maxRows > 0) {
             idx = c * maxRows + row;
           }
-          record.push(idx < locs.length ? locs[idx] : '');
+          record.push(idx < locs.length ? locs[idx] : "");
         }
 
         if (index < groupTitles.length - 1) {
           for (let g = 0; g < columnGap; g += 1) {
-            record.push('');
+            record.push("");
           }
         }
       });
@@ -401,6 +511,8 @@
     parseLines,
     tokenize,
     compareLocationCodes,
+    sortableLocationKey,
+    normalizeLocationKey,
     uniqueCaseInsensitive,
     parseGroupValues,
     normalizeImportedLocations,
@@ -408,6 +520,7 @@
     getColumnIndex,
     extractLocationsFromCSVText,
     extractPrioritiesFromXlsxRows,
+    parseCutTimeValue,
     normalizeConfig,
     extractLetterPrefix,
     groupLocations,
@@ -415,5 +528,6 @@
     columnsNeeded,
     buildOutputMatrix,
     buildPrioritySet,
+    buildPriorityToneByLocation,
   };
 });

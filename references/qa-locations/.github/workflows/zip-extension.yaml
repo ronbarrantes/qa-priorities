@@ -18,6 +18,6 @@ jobs:
       - name: Upload zip artifact
         uses: actions/upload-artifact@v4
         with:
-          name: qr-locations-mvp-zip
-          path: dist/qr-locations-mvp.zip
+          name: qa-locations-zip
+          path: dist/qa-locations.zip
           if-no-files-found: error

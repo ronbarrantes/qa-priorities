@@ -69,8 +69,10 @@ async function loadStoredInputs() {
   if (typeof saved.locations === 'string') {
     locationsPreview.value = saved.locations;
   }
-  if (typeof saved.priorities === 'string') {
-    prioritiesPreview.value = saved.priorities;
+  if (Array.isArray(saved.priorityEntries)) {
+    prioritiesPreview.value = saved.priorityEntries
+      .map((entry) => `${entry.location}${entry.cutTime ? ` | ${entry.cutTime}` : ''}`)
+      .join('\n');
   }
 }
 
@@ -78,7 +80,7 @@ async function saveStoredInputs(nextPartial) {
   const current = (await storage.get(INPUTS_STORAGE_KEY)) || {};
   await storage.set(INPUTS_STORAGE_KEY, {
     locations: typeof current.locations === 'string' ? current.locations : '',
-    priorities: typeof current.priorities === 'string' ? current.priorities : '',
+    priorityEntries: Array.isArray(current.priorityEntries) ? current.priorityEntries : [],
     ...nextPartial,
   });
 }
@@ -136,12 +138,14 @@ async function importPriorities(file) {
   setStatus('priorities', `Reading ${file.name}...`);
   const rows = await readXlsxRows(file);
   const result = extractPrioritiesFromXlsxRows(rows);
-  const text = result.values.join('\n');
+  const text = result.entries
+    .map((entry) => `${entry.location}${entry.cutTime ? ` | ${entry.cutTime}` : ''}`)
+    .join('\n');
   prioritiesPreview.value = text;
-  await saveStoredInputs({ priorities: text });
+  await saveStoredInputs({ priorityEntries: result.entries });
   setStatus(
     'priorities',
-    `Imported ${result.values.length} priority locations from ${result.rowCount} rows.`,
+    `Imported ${result.entries.length} unique priority locations from ${result.rowCount} rows.`,
     'success',
   );
 }
