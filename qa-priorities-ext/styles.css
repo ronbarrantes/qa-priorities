@@ -136,9 +136,15 @@ body {
 }
 
 table {
-  width: 100%;
+  width: max-content;
   border-collapse: collapse;
   font-size: 13px;
+}
+
+.todo-table thead,
+.todo-table tbody,
+.todo-table tr {
+  width: auto;
 }
 
 thead th {
@@ -151,7 +157,8 @@ thead th {
 th,
 td {
   border-bottom: 1px solid var(--border);
-  padding: 3px 8px;
+  width: auto;
+  padding: 4px 10px;
   text-align: left;
   white-space: nowrap;
   line-height: 1.2;
