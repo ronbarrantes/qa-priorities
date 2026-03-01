@@ -81,11 +81,18 @@
 
   function formatCutTime(dateObj) {
     if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return '';
-    return new Intl.DateTimeFormat('en-US', {
+    const baseTime = new Intl.DateTimeFormat('en-US', {
       hour: 'numeric',
       minute: dateObj.getMinutes() === 0 ? undefined : '2-digit',
       hour12: true,
     }).format(dateObj).replace(/\s/g, '').toLowerCase();
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfCutDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+    const dayDiff = Math.round((startOfCutDay.getTime() - startOfToday.getTime()) / 86400000);
+
+    return dayDiff === 1 ? `${baseTime}+` : baseTime;
   }
 
   function extractPrioritiesRows(rows) {
