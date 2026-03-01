@@ -15,50 +15,73 @@
       <section id="main-view" class="card">
         <div class="section-header">
           <h2>Input</h2>
-          <button
-            id="open-settings"
-            type="button"
-            class="icon-btn"
-            title="Settings"
-          >
-            ⚙️
-          </button>
+          <div class="header-actions">
+            <button
+              id="open-imports-btn"
+              type="button"
+              class="secondary compact-btn"
+            >
+              Open Imports
+            </button>
+            <button
+              id="open-settings"
+              type="button"
+              class="icon-btn"
+              title="Settings"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
 
         <div class="inputs-grid">
           <div class="input-group">
+            <label>Locations</label>
             <div class="input-actions">
-              <button
-                id="import-locations-btn"
-                type="button"
-                class="secondary import-btn"
-              >
-                Import Locations (CSV)
-              </button>
-              <p class="field-status">Opens importer page</p>
+              <div class="input-actions-row">
+                <button
+                  id="pick-locations-btn"
+                  type="button"
+                  class="secondary import-btn"
+                >
+                  Select Locations (.csv)
+                </button>
+              </div>
+              <p id="locations-import-status" class="field-status">
+                Opens importer page
+              </p>
             </div>
-            <label for="locations">Locations</label>
-            <textarea
-              id="locations"
-              placeholder="Paste one location per line"
-            ></textarea>
+            <p class="helper">Locations are loaded from CSV import only.</p>
+            <input
+              id="locations-file"
+              type="file"
+              accept=".csv,text/csv"
+              hidden
+            />
           </div>
           <div class="input-group">
+            <label>Priorities</label>
             <div class="input-actions">
-              <button
-                id="import-priorities-btn"
-                type="button"
-                class="secondary import-btn"
-              >
-                Import Priorities (XLSX)
-              </button>
-              <p class="field-status">Opens importer page</p>
+              <div class="input-actions-row">
+                <button
+                  id="pick-priorities-btn"
+                  type="button"
+                  class="secondary import-btn"
+                >
+                  Select Priorities (.xlsx)
+                </button>
+              </div>
+              <p id="priorities-import-status" class="field-status">
+                Opens importer page
+              </p>
             </div>
-            <label for="priorities">Priorities</label>
-            <textarea
-              id="priorities"
-              placeholder="Paste one priority per line"
-            ></textarea>
+            <p class="helper">Priority data is loaded from XLSX import only.</p>
+            <input
+              id="priorities-file"
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              hidden
+            />
           </div>
         </div>
 
@@ -103,6 +126,10 @@
         </div>
 
         <div class="settings-toggle">
+          <label class="checkbox">
+            <input id="colors-mode" type="checkbox" />
+            Colors mode (red/yellow/green)
+          </label>
           <label class="checkbox">
             <input id="hold-view" type="checkbox" />
             Hold last view on reopen
@@ -157,6 +184,7 @@
     </main>
 
     <script src="logic.js"></script>
+    <script src="vendor/xlsx.full.min.js"></script>
     <script src="vendor/html2canvas.min.js"></script>
     <script src="popup.js"></script>
   </body>
