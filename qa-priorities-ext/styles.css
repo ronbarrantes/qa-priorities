@@ -141,6 +141,12 @@ table {
   font-size: 13px;
 }
 
+.todo-table thead,
+.todo-table tbody,
+.todo-table tr {
+  width: auto;
+}
+
 thead th {
   position: sticky;
   top: 0;
