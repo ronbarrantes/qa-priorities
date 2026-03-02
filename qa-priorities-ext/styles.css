@@ -103,11 +103,13 @@ body {
 .tables-stack {
   display: grid;
   gap: 12px;
+  justify-items: start;
 }
 
 .group-table-card {
-  display: grid;
+  display: inline-grid;
   gap: 8px;
+  justify-items: start;
 }
 
 .group-table-header {
@@ -129,6 +131,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
+  width: fit-content;
+  max-width: 100%;
 }
 
 .table-wrap.grouped {
@@ -137,7 +141,6 @@ body {
 
 table {
   width: max-content;
-  min-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -153,10 +156,10 @@ th,
 td {
   border-bottom: 1px solid var(--border);
   width: auto;
-  padding: 4px 10px;
+  padding: 3px 7px;
   text-align: left;
   white-space: nowrap;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .todo-table th:nth-child(4),
