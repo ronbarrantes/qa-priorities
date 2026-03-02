@@ -101,15 +101,19 @@ body {
 }
 
 .tables-stack {
-  display: grid;
+  display: inline-grid;
   gap: 12px;
   justify-items: start;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .group-table-card {
   display: inline-grid;
   gap: 8px;
   justify-items: start;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .group-table-header {
@@ -117,6 +121,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
 }
 
 .group-table-header h3 {
