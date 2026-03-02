@@ -24,13 +24,14 @@
 
 body {
   margin: 0;
-  min-width: 760px;
+  width: max-content;
   background: var(--bg);
   color: var(--text);
 }
 
 .app {
   padding: 12px;
+  width: max-content;
 }
 
 .toolbar {
@@ -105,7 +106,6 @@ body {
   gap: 12px;
   justify-items: start;
   width: fit-content;
-  max-width: 100%;
 }
 
 .group-table-card {
@@ -113,7 +113,6 @@ body {
   gap: 8px;
   justify-items: start;
   width: fit-content;
-  max-width: 100%;
 }
 
 .group-table-header {
@@ -137,7 +136,6 @@ body {
   border-radius: 10px;
   background: var(--surface);
   width: fit-content;
-  max-width: 100%;
 }
 
 .table-wrap.grouped {
