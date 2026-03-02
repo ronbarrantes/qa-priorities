@@ -24,7 +24,7 @@
 
 body {
   margin: 0;
-  min-width: 760px;
+  width: fit-content;
   background: var(--bg);
   color: var(--text);
 }
