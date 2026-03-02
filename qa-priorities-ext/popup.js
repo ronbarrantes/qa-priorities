@@ -4,12 +4,13 @@ if (!logic) {
   throw new Error('QAPrioritiesLogic not loaded');
 }
 
-const { extractPrioritiesRows } = logic;
+const { extractPrioritiesRows, parseCutTime, formatCutTime, compareLocationCodes } = logic;
 
 const STORAGE_KEY = 'qa-priorities-todos-v1';
 const SETTINGS_STORAGE_KEY = 'qa-priorities-settings-v1';
 
 const DEFAULT_SETTINGS = {
+  daylightSavingsAdjustment: false,
   groups: [
     { title: 'pallets', values: ['a', 'b', 'c', 'lud', 'prm', 'slp'] },
     { title: 'efg', values: ['e', 'f', 'g', 'gft', 'hvc', 'hwk', 'hvb'] },
@@ -33,6 +34,7 @@ const settingsSaveBtn = document.getElementById('settings-save');
 const settingsResetBtn = document.getElementById('settings-reset');
 const addGroupBtn = document.getElementById('add-group');
 const groupsList = document.getElementById('groups-list');
+const settingsDstToggle = document.getElementById('settings-dst-toggle');
 
 let tasksState = [];
 let settingsState = loadSettings();
@@ -90,8 +92,11 @@ function normalizeSettings(config) {
         .filter(Boolean)
     : [];
 
+  const daylightSavingsAdjustment = Boolean(config?.daylightSavingsAdjustment);
+
   if (!groups.length) {
     return {
+      daylightSavingsAdjustment,
       groups: DEFAULT_SETTINGS.groups.map((group) => ({
         title: group.title,
         values: normalizeGroupValues(group.values),
@@ -99,7 +104,7 @@ function normalizeSettings(config) {
     };
   }
 
-  return { groups };
+  return { daylightSavingsAdjustment, groups };
 }
 
 function loadSettings() {
@@ -135,6 +140,7 @@ function parseGroupValues(raw) {
 
 function populateSettingsUI(config) {
   groupsList.replaceChildren();
+  settingsDstToggle.checked = Boolean(config.daylightSavingsAdjustment);
   config.groups.forEach((group) => {
     addGroupToUI(group.title, group.values);
   });
@@ -282,7 +288,34 @@ function getSettingsFromUI() {
     const values = parseGroupValues(item.querySelector('.group-values-input')?.value);
     if (title) groups.push({ title, values });
   });
-  return { groups };
+  return {
+    daylightSavingsAdjustment: Boolean(settingsDstToggle?.checked),
+    groups,
+  };
+}
+
+function applyCutTimeAdjustmentToTask(task) {
+  const cutTimeRaw = String(task.cutTimeRaw || '').trim();
+  const parsed = parseCutTime(cutTimeRaw);
+  const adjustedDate =
+    parsed && settingsState.daylightSavingsAdjustment ? new Date(parsed.getTime() + 3600000) : parsed;
+
+  return {
+    ...task,
+    cutTimeDate: adjustedDate,
+    cutTimeDisplay: adjustedDate ? formatCutTime(adjustedDate) : cutTimeRaw,
+  };
+}
+
+function refreshTaskTimes() {
+  tasksState = tasksState
+    .map(applyCutTimeAdjustmentToTask)
+    .sort((left, right) => {
+      const leftMs = left.cutTimeDate ? left.cutTimeDate.getTime() : Number.MAX_SAFE_INTEGER;
+      const rightMs = right.cutTimeDate ? right.cutTimeDate.getTime() : Number.MAX_SAFE_INTEGER;
+      if (leftMs !== rightMs) return leftMs - rightMs;
+      return compareLocationCodes(left.currentLocation, right.currentLocation);
+    });
 }
 
 function openSettings() {
@@ -301,6 +334,7 @@ function saveSettingsFromUI() {
     return;
   }
   saveSettings(config);
+  refreshTaskTimes();
   renderTables();
   setStatus('Settings saved.', 'success');
   closeSettings();
@@ -570,7 +604,9 @@ async function importFile(file) {
   if (!file) return;
   setStatus(`Reading ${file.name}...`);
   const rows = await readXlsxRows(file);
-  const result = extractPrioritiesRows(rows);
+  const result = extractPrioritiesRows(rows, {
+    daylightSavingsAdjustment: settingsState.daylightSavingsAdjustment,
+  });
   tasksState = result.tasks;
   await persistAndRender(
     `Imported ${result.tasks.length} to-dos from ${result.totalRows} rows.`,
@@ -583,6 +619,7 @@ async function init() {
   const saved = await storage.get(STORAGE_KEY);
   if (Array.isArray(saved)) {
     tasksState = saved;
+    refreshTaskTimes();
   }
   renderTables();
 }
