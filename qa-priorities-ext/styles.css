@@ -109,7 +109,7 @@ body {
 }
 
 .group-table-card {
-  display: grid;
+  display: inline-grid;
   gap: 8px;
   justify-items: start;
   width: fit-content;
