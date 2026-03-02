@@ -125,7 +125,7 @@
       const cutTimeRaw = String(row[cutTimeIdx] || '').trim();
       const cutDate = parseCutTime(cutTimeRaw);
       const adjustedCutDate =
-        cutDate && options.daylightSavingsAdjustment ? new Date(cutDate.getTime() + 3600000) : cutDate;
+        cutDate && options.daylightSavingsAdjustment ? new Date(cutDate.getTime() - 3600000) : cutDate;
 
       tasks.push({
         id: `${rowOffset}-${String(row[gtinIdx] || '').trim()}-${location}`,

@@ -298,7 +298,7 @@ function applyCutTimeAdjustmentToTask(task) {
   const cutTimeRaw = String(task.cutTimeRaw || '').trim();
   const parsed = parseCutTime(cutTimeRaw);
   const adjustedDate =
-    parsed && settingsState.daylightSavingsAdjustment ? new Date(parsed.getTime() + 3600000) : parsed;
+    parsed && settingsState.daylightSavingsAdjustment ? new Date(parsed.getTime() - 3600000) : parsed;
 
   return {
     ...task,
