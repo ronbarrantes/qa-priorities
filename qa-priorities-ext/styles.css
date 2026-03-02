@@ -136,15 +136,10 @@ body {
 }
 
 table {
-  width: fit-content;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-}
-
-.todo-table thead,
-.todo-table tbody,
-.todo-table tr {
-  width: auto;
 }
 
 thead th {
@@ -157,7 +152,7 @@ thead th {
 th,
 td {
   border-bottom: 1px solid var(--border);
-  width: fit-content;
+  width: auto;
   padding: 4px 10px;
   text-align: left;
   white-space: nowrap;
@@ -268,6 +263,24 @@ tbody tr.completed td:not(:first-child):not(:last-child) {
   color: var(--muted);
   font-size: 0.85rem;
   line-height: 1.35;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 0.875rem;
+}
+
+.toggle-row input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
 }
 
 .groups-list {
