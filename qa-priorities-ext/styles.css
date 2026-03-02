@@ -136,8 +136,7 @@ body {
 }
 
 table {
-  width: max-content;
-  min-width: 100%;
+  width: fit-content;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -152,7 +151,7 @@ thead th {
 th,
 td {
   border-bottom: 1px solid var(--border);
-  width: auto;
+  width: fit-content;
   padding: 4px 10px;
   text-align: left;
   white-space: nowrap;
