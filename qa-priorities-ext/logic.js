@@ -95,7 +95,7 @@
     return dayDiff === 1 ? `${baseTime}+` : baseTime;
   }
 
-  function extractPrioritiesRows(rows) {
+  function extractPrioritiesRows(rows, options = {}) {
     if (!Array.isArray(rows) || rows.length === 0) {
       throw new Error('Excel file is empty.');
     }
@@ -124,6 +124,8 @@
 
       const cutTimeRaw = String(row[cutTimeIdx] || '').trim();
       const cutDate = parseCutTime(cutTimeRaw);
+      const adjustedCutDate =
+        cutDate && options.daylightSavingsAdjustment ? new Date(cutDate.getTime() - 3600000) : cutDate;
 
       tasks.push({
         id: `${rowOffset}-${String(row[gtinIdx] || '').trim()}-${location}`,
@@ -133,8 +135,8 @@
         currentLocation: location,
         containerTag: tag,
         cutTimeRaw,
-        cutTimeDate: cutDate,
-        cutTimeDisplay: cutDate ? formatCutTime(cutDate) : cutTimeRaw,
+        cutTimeDate: adjustedCutDate,
+        cutTimeDisplay: adjustedCutDate ? formatCutTime(adjustedCutDate) : cutTimeRaw,
       });
     });
 
