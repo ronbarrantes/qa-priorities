@@ -429,12 +429,15 @@ async function removeTaskById(taskId) {
 }
 
 async function removeGroupTasks(groupTitle) {
+  const grouped = groupTasksBySettings().find((group) => group.title === groupTitle);
+  if (!grouped) {
+    setStatus(`No rows removed from ${groupTitle}.`);
+    return;
+  }
+
+  const idsToRemove = new Set(grouped.tasks.map((task) => task.id));
   const before = tasksState.length;
-  tasksState = tasksState.filter((task) => {
-    const grouped = settingsState.groups.find((group) => group.title === groupTitle);
-    if (!grouped) return true;
-    return !taskMatchesGroup(task, grouped);
-  });
+  tasksState = tasksState.filter((task) => !idsToRemove.has(task.id));
 
   const removed = before - tasksState.length;
   if (!removed) {
