@@ -62,11 +62,17 @@
     const date = new Date(normalized);
     if (!Number.isNaN(date.getTime())) return date;
 
-    const match = normalized.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)/i);
+    const match = normalized.match(
+      /(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)?/i,
+    );
     if (!match) return null;
-    let hour = Number(match[4]) % 12;
-    if (match[6].toUpperCase() === 'PM') {
-      hour += 12;
+    const meridiem = String(match[6] || '').toUpperCase();
+    let hour = Number(match[4]);
+    if (meridiem) {
+      hour %= 12;
+      if (meridiem === 'PM') {
+        hour += 12;
+      }
     }
     return new Date(
       Number(match[3]),
