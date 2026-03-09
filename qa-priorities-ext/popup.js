@@ -4,7 +4,7 @@ if (!logic) {
   throw new Error('QAPrioritiesLogic not loaded');
 }
 
-const { extractPrioritiesRows, parseCutTime, formatCutTime, compareLocationCodes } = logic;
+const { extractPrioritiesRows, parseCutTime, formatCutTime, compareLocationCodes, getFilteredLocationName } = logic;
 
 const STORAGE_KEY = 'qa-priorities-todos-v1';
 const SETTINGS_STORAGE_KEY = 'qa-priorities-settings-v1';
@@ -314,7 +314,10 @@ function refreshTaskTimes() {
       const leftMs = left.cutTimeDate ? left.cutTimeDate.getTime() : Number.MAX_SAFE_INTEGER;
       const rightMs = right.cutTimeDate ? right.cutTimeDate.getTime() : Number.MAX_SAFE_INTEGER;
       if (leftMs !== rightMs) return leftMs - rightMs;
-      return compareLocationCodes(left.currentLocation, right.currentLocation);
+      return compareLocationCodes(
+        getFilteredLocationName(left.currentLocation),
+        getFilteredLocationName(right.currentLocation),
+      );
     });
 }
 

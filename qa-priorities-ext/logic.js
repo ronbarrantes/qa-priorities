@@ -54,6 +54,15 @@
     return (headers || []).findIndex((header) => String(header || '').trim() === columnName);
   }
 
+
+  function getFilteredLocationName(location) {
+    const normalized = String(location || '').trim();
+    if (!normalized) return '';
+
+    const idx = normalized.indexOf(':');
+    return idx === -1 ? normalized : normalized.slice(idx + 1).trim();
+  }
+
   function parseCutTime(raw) {
     const value = String(raw || '').trim();
     if (!value) return null;
@@ -144,7 +153,10 @@
       const leftMs = left.cutTimeDate ? left.cutTimeDate.getTime() : Number.MAX_SAFE_INTEGER;
       const rightMs = right.cutTimeDate ? right.cutTimeDate.getTime() : Number.MAX_SAFE_INTEGER;
       if (leftMs !== rightMs) return leftMs - rightMs;
-      return compareLocationCodes(left.currentLocation, right.currentLocation);
+      return compareLocationCodes(
+        getFilteredLocationName(left.currentLocation),
+        getFilteredLocationName(right.currentLocation),
+      );
     });
 
     return {
@@ -157,6 +169,7 @@
     TRACKED_TAGS,
     tokenize,
     compareLocationCodes,
+    getFilteredLocationName,
     getColumnIndex,
     parseCutTime,
     formatCutTime,
