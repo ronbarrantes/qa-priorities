@@ -8,6 +8,7 @@ const { extractPrioritiesRows, parseCutTime, formatCutTime, compareLocationCodes
 
 const STORAGE_KEY = 'qa-priorities-todos-v1';
 const SETTINGS_STORAGE_KEY = 'qa-priorities-settings-v1';
+const THEME_STORAGE_KEY = 'qa-priorities-theme-v1';
 
 const DEFAULT_SETTINGS = {
   daylightSavingsAdjustment: false,
@@ -34,10 +35,13 @@ const settingsSaveBtn = document.getElementById('settings-save');
 const settingsResetBtn = document.getElementById('settings-reset');
 const addGroupBtn = document.getElementById('add-group');
 const groupsList = document.getElementById('groups-list');
+const themeModeSelect = document.getElementById('theme-mode');
 const settingsDstToggle = document.getElementById('settings-dst-toggle');
 
 let tasksState = [];
 let settingsState = loadSettings();
+let themeMediaQuery = null;
+let currentThemeMode = 'system';
 
 function getStorage() {
   if (window.chrome?.storage?.local) {
@@ -64,6 +68,8 @@ function getStorage() {
 }
 
 const storage = getStorage();
+
+applyStaticIcons();
 
 function setStatus(message, tone = '') {
   statusEl.textContent = message || '';
@@ -203,18 +209,74 @@ function createGearIcon() {
   circle.setAttribute('stroke-width', '2');
   svg.appendChild(circle);
 
-  const path = document.createElementNS(svgNS, 'path');
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', 'currentColor');
-  path.setAttribute('stroke-linecap', 'round');
-  path.setAttribute('stroke-linejoin', 'round');
-  path.setAttribute('stroke-width', '2');
-  path.setAttribute(
+  const teeth = document.createElementNS(svgNS, 'path');
+  teeth.setAttribute('fill', 'none');
+  teeth.setAttribute('stroke', 'currentColor');
+  teeth.setAttribute('stroke-linecap', 'round');
+  teeth.setAttribute('stroke-linejoin', 'round');
+  teeth.setAttribute('stroke-width', '2');
+  teeth.setAttribute(
     'd',
-    'M12 2.75v2.5M12 18.75v2.5M2.75 12h2.5M18.75 12h2.5M5.45 5.45l1.8 1.8M16.75 16.75l1.8 1.8M18.55 5.45l-1.8 1.8M7.25 16.75l-1.8 1.8',
+    'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 .99-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .99 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51.99H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.99z',
   );
-  svg.appendChild(path);
+  svg.appendChild(teeth);
   return svg;
+}
+
+function getThemePreference() {
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
+    return savedTheme;
+  }
+  return 'system';
+}
+
+function resolveTheme(themeMode) {
+  if (themeMode === 'light' || themeMode === 'dark') {
+    return themeMode;
+  }
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function removeThemeListener() {
+  if (!themeMediaQuery) return;
+  if (typeof themeMediaQuery.removeEventListener === 'function') {
+    themeMediaQuery.removeEventListener('change', applySystemTheme);
+  } else if (typeof themeMediaQuery.removeListener === 'function') {
+    themeMediaQuery.removeListener(applySystemTheme);
+  }
+  themeMediaQuery = null;
+}
+
+function applySystemTheme() {
+  if (currentThemeMode !== 'system') return;
+  document.documentElement.setAttribute('data-theme', resolveTheme('system'));
+}
+
+function setupThemeListener(themeMode) {
+  removeThemeListener();
+  if (themeMode !== 'system' || typeof window.matchMedia !== 'function') {
+    return;
+  }
+
+  themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  if (typeof themeMediaQuery.addEventListener === 'function') {
+    themeMediaQuery.addEventListener('change', applySystemTheme);
+  } else if (typeof themeMediaQuery.addListener === 'function') {
+    themeMediaQuery.addListener(applySystemTheme);
+  }
+}
+
+function applyTheme(themeMode) {
+  const nextThemeMode = themeMode === 'light' || themeMode === 'dark' ? themeMode : 'system';
+  currentThemeMode = nextThemeMode;
+  window.localStorage.setItem(THEME_STORAGE_KEY, nextThemeMode);
+  document.documentElement.setAttribute('data-theme', resolveTheme(nextThemeMode));
+  setupThemeListener(nextThemeMode);
+
+  if (themeModeSelect) {
+    themeModeSelect.value = nextThemeMode;
+  }
 }
 
 function applyStaticIcons() {
@@ -618,7 +680,7 @@ async function importFile(file) {
 }
 
 async function init() {
-  applyStaticIcons();
+  applyTheme(getThemePreference());
   const saved = await storage.get(STORAGE_KEY);
   if (Array.isArray(saved)) {
     tasksState = saved;
@@ -633,6 +695,7 @@ closeSettingsBtn?.addEventListener('click', closeSettings);
 settingsSaveBtn?.addEventListener('click', saveSettingsFromUI);
 settingsResetBtn?.addEventListener('click', resetSettings);
 addGroupBtn?.addEventListener('click', () => addGroupToUI());
+themeModeSelect?.addEventListener('change', (event) => applyTheme(event.target.value));
 
 fileInput?.addEventListener('change', async (event) => {
   try {
