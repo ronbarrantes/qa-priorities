@@ -8,6 +8,7 @@ const { extractPrioritiesRows, parseCutTime, formatCutTime, compareLocationCodes
 
 const STORAGE_KEY = 'qa-priorities-todos-v1';
 const SETTINGS_STORAGE_KEY = 'qa-priorities-settings-v1';
+const DEFAULT_THEME = 'dark';
 
 const DEFAULT_SETTINGS = {
   daylightSavingsAdjustment: false,
@@ -35,6 +36,7 @@ const settingsResetBtn = document.getElementById('settings-reset');
 const addGroupBtn = document.getElementById('add-group');
 const groupsList = document.getElementById('groups-list');
 const settingsDstToggle = document.getElementById('settings-dst-toggle');
+const settingsLightModeToggle = document.getElementById('settings-light-mode-toggle');
 
 let tasksState = [];
 let settingsState = loadSettings();
@@ -93,10 +95,12 @@ function normalizeSettings(config) {
     : [];
 
   const daylightSavingsAdjustment = Boolean(config?.daylightSavingsAdjustment);
+  const theme = config?.theme === 'light' ? 'light' : DEFAULT_THEME;
 
   if (!groups.length) {
     return {
       daylightSavingsAdjustment,
+      theme,
       groups: DEFAULT_SETTINGS.groups.map((group) => ({
         title: group.title,
         values: normalizeGroupValues(group.values),
@@ -104,7 +108,7 @@ function normalizeSettings(config) {
     };
   }
 
-  return { daylightSavingsAdjustment, groups };
+  return { daylightSavingsAdjustment, theme, groups };
 }
 
 function loadSettings() {
@@ -141,9 +145,15 @@ function parseGroupValues(raw) {
 function populateSettingsUI(config) {
   groupsList.replaceChildren();
   settingsDstToggle.checked = Boolean(config.daylightSavingsAdjustment);
+  settingsLightModeToggle.checked = config.theme === 'light';
   config.groups.forEach((group) => {
     addGroupToUI(group.title, group.values);
   });
+}
+
+function applyTheme(theme) {
+  const normalizedTheme = theme === 'light' ? 'light' : DEFAULT_THEME;
+  document.documentElement.setAttribute('data-theme', normalizedTheme);
 }
 
 function createChevronIcon(direction) {
@@ -290,6 +300,7 @@ function getSettingsFromUI() {
   });
   return {
     daylightSavingsAdjustment: Boolean(settingsDstToggle?.checked),
+    theme: settingsLightModeToggle?.checked ? 'light' : DEFAULT_THEME,
     groups,
   };
 }
@@ -334,6 +345,7 @@ function saveSettingsFromUI() {
     return;
   }
   saveSettings(config);
+  applyTheme(settingsState.theme);
   refreshTaskTimes();
   renderTables();
   setStatus('Settings saved.', 'success');
@@ -619,6 +631,7 @@ async function importFile(file) {
 
 async function init() {
   applyStaticIcons();
+  applyTheme(settingsState.theme);
   const saved = await storage.get(STORAGE_KEY);
   if (Array.isArray(saved)) {
     tasksState = saved;
@@ -633,6 +646,9 @@ closeSettingsBtn?.addEventListener('click', closeSettings);
 settingsSaveBtn?.addEventListener('click', saveSettingsFromUI);
 settingsResetBtn?.addEventListener('click', resetSettings);
 addGroupBtn?.addEventListener('click', () => addGroupToUI());
+settingsLightModeToggle?.addEventListener('change', (event) => {
+  applyTheme(event.target.checked ? 'light' : DEFAULT_THEME);
+});
 
 fileInput?.addEventListener('change', async (event) => {
   try {

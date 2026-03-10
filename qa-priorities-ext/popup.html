@@ -13,7 +13,7 @@
           <h1>To-Do Priorities</h1>
           <div class="toolbar-actions">
             <button id="import-btn" class="btn">Import Priorities (.xlsx)</button>
-            <button id="open-settings" class="btn icon-btn" title="Settings">⚙️</button>
+            <button id="open-settings" class="icon-btn" title="Settings">⚙️</button>
           </div>
           <input id="file-input" type="file" accept=".xlsx,.xls" hidden />
         </header>
@@ -34,6 +34,11 @@
         <label class="toggle-row" for="settings-dst-toggle">
           <span>Daylight savings adjustment (-1 hour)</span>
           <input id="settings-dst-toggle" type="checkbox" />
+        </label>
+
+        <label class="toggle-row" for="settings-light-mode-toggle">
+          <span>Light mode</span>
+          <input id="settings-light-mode-toggle" type="checkbox" />
         </label>
 
         <div id="groups-list" class="groups-list"></div>
