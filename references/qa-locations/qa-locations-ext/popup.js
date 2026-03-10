@@ -13,13 +13,16 @@ const {
   groupLocations,
   groupByTitle,
   buildOutputMatrix,
-  buildPrioritySet,
+  buildPriorityToneByLocation,
+  extractLocationsFromCSVText,
+  extractPrioritiesFromXlsxRows,
 } = logic;
 
 const STORAGE_KEY = 'qa-locations-settings-v1';
 const INPUTS_STORAGE_KEY = 'qa-locations-inputs-v1';
 const VIEW_STORAGE_KEY = 'qa-locations-view-v1';
 const HOLD_VIEW_KEY = 'qa-locations-hold-view-v1';
+const THEME_STORAGE_KEY = 'qa-locations-theme-v1';
 const DEFAULT_SETTINGS = {
   groups: [
     { title: 'pallets', values: ['a', 'b', 'c', 'lud', 'prm', 'slp'] },
@@ -29,6 +32,7 @@ const DEFAULT_SETTINGS = {
   ],
   maxRows: 20,
   columnGap: 1,
+  colorsMode: false,
 };
 
 const views = {
@@ -38,12 +42,16 @@ const views = {
 };
 
 const locationsInput = document.getElementById('locations');
-const prioritiesInput = document.getElementById('priorities');
 const tableContainer = document.getElementById('table-container');
 const summary = document.getElementById('summary');
 const resultActionStatus = document.getElementById('result-action-status');
-const importLocationsBtn = document.getElementById('import-locations-btn');
-const importPrioritiesBtn = document.getElementById('import-priorities-btn');
+const openImportsBtn = document.getElementById('open-imports-btn');
+const pickLocationsBtn = document.getElementById('pick-locations-btn');
+const pickPrioritiesBtn = document.getElementById('pick-priorities-btn');
+const locationsFileInput = document.getElementById('locations-file');
+const prioritiesFileInput = document.getElementById('priorities-file');
+const locationsImportStatus = document.getElementById('locations-import-status');
+const prioritiesImportStatus = document.getElementById('priorities-import-status');
 
 const createBtn = document.getElementById('create');
 const resetBtn = document.getElementById('reset');
@@ -59,10 +67,27 @@ const saveTableImageBtn = document.getElementById('save-table-image');
 const groupsList = document.getElementById('groups-list');
 const maxRowsInput = document.getElementById('max-rows');
 const columnGapInput = document.getElementById('column-gap');
+const themeModeSelect = document.getElementById('theme-mode');
+const colorsModeToggle = document.getElementById('colors-mode');
 const holdViewToggle = document.getElementById('hold-view');
 
 let settingsState = loadSettings();
 let holdViewEnabled = false;
+let priorityEntriesState = [];
+let locationsState = '';
+let themeMediaQuery = null;
+let currentThemeMode = 'system';
+
+function getLocationsText() {
+  return locationsInput ? locationsInput.value : locationsState;
+}
+
+function setLocationsText(value) {
+  locationsState = value || '';
+  if (locationsInput) {
+    locationsInput.value = locationsState;
+  }
+}
 
 function getStorage() {
   if (window.chrome?.storage?.local) {
@@ -154,14 +179,21 @@ async function loadLastViewKey() {
 async function loadInputs() {
   const saved = await storage.get(INPUTS_STORAGE_KEY);
   if (!saved || typeof saved !== 'object') return;
-  if (typeof saved.locations === 'string') locationsInput.value = saved.locations;
-  if (typeof saved.priorities === 'string') prioritiesInput.value = saved.priorities;
+  if (typeof saved.locations === 'string') setLocationsText(saved.locations);
+  if (Array.isArray(saved.priorityEntries)) {
+    priorityEntriesState = saved.priorityEntries
+      .map((entry) => ({
+        location: String(entry?.location || '').trim(),
+        cutTime: entry?.cutTime ? String(entry.cutTime) : null,
+      }))
+      .filter((entry) => entry.location);
+  }
 }
 
 function saveInputs() {
   storage.set(INPUTS_STORAGE_KEY, {
-    locations: locationsInput.value,
-    priorities: prioritiesInput.value,
+    locations: getLocationsText(),
+    priorityEntries: priorityEntriesState,
   });
 }
 
@@ -175,6 +207,92 @@ function setResultActionStatus(message, tone = '') {
   resultActionStatus.classList.remove('success', 'error');
   if (tone) {
     resultActionStatus.classList.add(tone);
+  }
+}
+
+function setImportStatus(kind, message, tone = '') {
+  const el = kind === 'locations' ? locationsImportStatus : prioritiesImportStatus;
+  if (!el) return;
+  el.textContent = message || '';
+  el.classList.remove('success', 'error');
+  if (tone) {
+    el.classList.add(tone);
+  }
+}
+
+function openPicker(inputEl) {
+  if (!inputEl) return;
+  try {
+    if (typeof inputEl.showPicker === 'function') {
+      inputEl.showPicker();
+      return;
+    }
+  } catch (err) {
+    console.warn('showPicker failed, using click().', err);
+  }
+  inputEl.click();
+}
+
+async function readXlsxRows(file) {
+  if (!window.XLSX?.read || !window.XLSX?.utils?.sheet_to_json) {
+    throw new Error('XLSX parser not available. Expected vendor/xlsx.full.min.js.');
+  }
+
+  const data = await file.arrayBuffer();
+  const workbook = window.XLSX.read(data, { type: 'array' });
+  const firstSheetName = workbook.SheetNames?.[0];
+  if (!firstSheetName) {
+    throw new Error('No worksheet found in Excel file.');
+  }
+
+  const rows = window.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
+    header: 1,
+    raw: false,
+    defval: '',
+    blankrows: false,
+  });
+
+  return rows.map((row) => (Array.isArray(row) ? row : []));
+}
+
+async function importLocationsFromFile(file) {
+  setImportStatus('locations', `Reading ${file.name}...`);
+  const csvText = await file.text();
+  const result = extractLocationsFromCSVText(csvText);
+  setLocationsText(result.values.join('\n'));
+  saveInputs();
+  setImportStatus(
+    'locations',
+    `Imported ${result.values.length} unique locations from ${result.rowCount} rows.`,
+    'success',
+  );
+}
+
+async function importPrioritiesFromFile(file) {
+  setImportStatus('priorities', `Reading ${file.name}...`);
+  const rows = await readXlsxRows(file);
+  const result = extractPrioritiesFromXlsxRows(rows);
+  priorityEntriesState = result.entries;
+  saveInputs();
+  setImportStatus(
+    'priorities',
+    `Imported ${result.entries.length} unique priority locations from ${result.rowCount} rows.`,
+    'success',
+  );
+}
+
+async function handleImportFile(kind, file) {
+  if (!file) return;
+  try {
+    if (kind === 'locations') {
+      await importLocationsFromFile(file);
+    } else {
+      await importPrioritiesFromFile(file);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Import failed.';
+    setImportStatus(kind, message, 'error');
+    console.error(`Failed to import ${kind}`, err);
   }
 }
 
@@ -265,7 +383,7 @@ function openImporterPage(target) {
   window.open(url.toString(), '_blank');
 }
 
-function renderTable(matrix, prioritySet) {
+function renderTable(matrix, priorityToneByLocation) {
   tableContainer.replaceChildren();
 
   if (!matrix.headers.length) {
@@ -274,6 +392,8 @@ function renderTable(matrix, prioritySet) {
   }
 
   const table = document.createElement('table');
+  const gapColumns = settingsState.columnGap > 0 ? 1 : Math.max(0, settingsState.columnGap);
+  const gapWidthPx = settingsState.columnGap > 0 ? settingsState.columnGap * 16 : 0;
   const thead = document.createElement('thead');
   const headerRow = document.createElement('tr');
 
@@ -285,9 +405,13 @@ function renderTable(matrix, prioritySet) {
     headerRow.appendChild(th);
 
     if (index < matrix.groupTitles.length - 1 && matrix.groupColumns[index] !== undefined) {
-      for (let g = 0; g < settingsState.columnGap; g += 1) {
+      for (let g = 0; g < gapColumns; g += 1) {
         const gap = document.createElement('th');
         gap.classList.add('gap');
+        if (gapWidthPx > 0) {
+          gap.style.width = `${gapWidthPx}px`;
+          gap.style.minWidth = `${gapWidthPx}px`;
+        }
         headerRow.appendChild(gap);
       }
     }
@@ -304,9 +428,16 @@ function renderTable(matrix, prioritySet) {
       td.textContent = value;
       if (!matrix.headers[idx]) {
         td.classList.add('gap');
+        if (gapWidthPx > 0) {
+          td.style.width = `${gapWidthPx}px`;
+          td.style.minWidth = `${gapWidthPx}px`;
+        }
       }
-      if (value && prioritySet.has(value.toUpperCase())) {
-        td.classList.add('priority');
+      if (value) {
+        const toneClass = priorityToneByLocation.get(String(value).trim().toUpperCase());
+        if (toneClass) {
+          td.classList.add(toneClass);
+        }
       }
       tr.appendChild(td);
     });
@@ -318,8 +449,7 @@ function renderTable(matrix, prioritySet) {
 }
 
 function createArrangement() {
-  const locations = uniqueCaseInsensitive(parseLines(locationsInput.value)).sort(compareLocationCodes);
-  const priorities = uniqueCaseInsensitive(parseLines(prioritiesInput.value)).sort(compareLocationCodes);
+  const locations = uniqueCaseInsensitive(parseLines(getLocationsText())).sort(compareLocationCodes);
 
   if (locations.length === 0) {
     summary.textContent = 'Add at least one location.';
@@ -333,18 +463,23 @@ function createArrangement() {
   const titleGrouped = groupByTitle(grouped, config);
   const titleOrder = config.groups.map((group) => group.title);
   const matrix = buildOutputMatrix(titleOrder, titleGrouped, config.maxRows, config.columnGap);
-  const prioritySet = buildPrioritySet(locations, priorities);
+  const priorityToneByLocation = buildPriorityToneByLocation(
+    locations,
+    priorityEntriesState,
+    new Date(),
+    config.colorsMode,
+  );
 
-  renderTable(matrix, prioritySet);
+  renderTable(matrix, priorityToneByLocation);
 
   const maxRowsLabel = config.maxRows > 0 ? config.maxRows : 'no limit';
-  summary.textContent = `${locations.length} locations, ${matrix.headers.length} columns, max rows ${maxRowsLabel}, gap ${config.columnGap}.`;
+  summary.textContent = `${locations.length} locations, ${priorityEntriesState.length} priorities, ${matrix.headers.length} columns, max rows ${maxRowsLabel}, gap ${config.columnGap}.`;
   showView('result');
 }
 
 function resetForm() {
-  locationsInput.value = '';
-  prioritiesInput.value = '';
+  setLocationsText('');
+  priorityEntriesState = [];
   clearInputsStorage();
 }
 
@@ -364,6 +499,9 @@ function populateSettingsUI(config) {
   });
   maxRowsInput.value = config.maxRows;
   columnGapInput.value = config.columnGap;
+  if (colorsModeToggle) {
+    colorsModeToggle.checked = config.colorsMode !== false;
+  }
 }
 
 function addGroupToUI(title = '', values = []) {
@@ -505,18 +643,74 @@ function createGearIcon() {
   circle.setAttribute('stroke-width', '2');
   svg.appendChild(circle);
 
-  const path = document.createElementNS(svgNS, 'path');
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', 'currentColor');
-  path.setAttribute('stroke-linecap', 'round');
-  path.setAttribute('stroke-linejoin', 'round');
-  path.setAttribute('stroke-width', '2');
-  path.setAttribute(
+  const teeth = document.createElementNS(svgNS, 'path');
+  teeth.setAttribute('fill', 'none');
+  teeth.setAttribute('stroke', 'currentColor');
+  teeth.setAttribute('stroke-linecap', 'round');
+  teeth.setAttribute('stroke-linejoin', 'round');
+  teeth.setAttribute('stroke-width', '2');
+  teeth.setAttribute(
     'd',
-    'M12 2.75v2.5M12 18.75v2.5M2.75 12h2.5M18.75 12h2.5M5.45 5.45l1.8 1.8M16.75 16.75l1.8 1.8M18.55 5.45l-1.8 1.8M7.25 16.75l-1.8 1.8',
+    'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 .99-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 .99 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51.99H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51.99z',
   );
-  svg.appendChild(path);
+  svg.appendChild(teeth);
   return svg;
+}
+
+function getThemePreference() {
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
+    return savedTheme;
+  }
+  return 'system';
+}
+
+function resolveTheme(themeMode) {
+  if (themeMode === 'light' || themeMode === 'dark') {
+    return themeMode;
+  }
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function removeThemeListener() {
+  if (!themeMediaQuery) return;
+  if (typeof themeMediaQuery.removeEventListener === 'function') {
+    themeMediaQuery.removeEventListener('change', applySystemTheme);
+  } else if (typeof themeMediaQuery.removeListener === 'function') {
+    themeMediaQuery.removeListener(applySystemTheme);
+  }
+  themeMediaQuery = null;
+}
+
+function applySystemTheme() {
+  if (currentThemeMode !== 'system') return;
+  document.documentElement.setAttribute('data-theme', resolveTheme('system'));
+}
+
+function setupThemeListener(themeMode) {
+  removeThemeListener();
+  if (themeMode !== 'system' || typeof window.matchMedia !== 'function') {
+    return;
+  }
+
+  themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  if (typeof themeMediaQuery.addEventListener === 'function') {
+    themeMediaQuery.addEventListener('change', applySystemTheme);
+  } else if (typeof themeMediaQuery.addListener === 'function') {
+    themeMediaQuery.addListener(applySystemTheme);
+  }
+}
+
+function applyTheme(themeMode) {
+  const nextThemeMode = themeMode === 'light' || themeMode === 'dark' ? themeMode : 'system';
+  currentThemeMode = nextThemeMode;
+  window.localStorage.setItem(THEME_STORAGE_KEY, nextThemeMode);
+  document.documentElement.setAttribute('data-theme', resolveTheme(nextThemeMode));
+  setupThemeListener(nextThemeMode);
+
+  if (themeModeSelect) {
+    themeModeSelect.value = nextThemeMode;
+  }
 }
 
 function applyStaticIcons() {
@@ -548,6 +742,7 @@ function getSettingsFromUI() {
     groups,
     maxRows: Number(maxRowsInput.value) || 20,
     columnGap: Number(columnGapInput.value) || 0,
+    colorsMode: Boolean(colorsModeToggle?.checked),
   };
 }
 
@@ -574,10 +769,26 @@ function resetSettings() {
 
 createBtn.addEventListener('click', createArrangement);
 resetBtn.addEventListener('click', resetForm);
-locationsInput.addEventListener('input', saveInputs);
-prioritiesInput.addEventListener('input', saveInputs);
-importLocationsBtn?.addEventListener('click', () => openImporterPage('locations'));
-importPrioritiesBtn?.addEventListener('click', () => openImporterPage('priorities'));
+locationsInput?.addEventListener('input', saveInputs);
+openImportsBtn?.addEventListener('click', () => openImporterPage('locations'));
+pickLocationsBtn?.addEventListener('click', () => {
+  setImportStatus('locations', 'Choose a CSV file...');
+  openPicker(locationsFileInput);
+});
+pickPrioritiesBtn?.addEventListener('click', () => {
+  setImportStatus('priorities', 'Choose an XLSX file...');
+  openPicker(prioritiesFileInput);
+});
+locationsFileInput?.addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  await handleImportFile('locations', file);
+  event.target.value = '';
+});
+prioritiesFileInput?.addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  await handleImportFile('priorities', file);
+  event.target.value = '';
+});
 openSettingsBtn.addEventListener('click', openSettings);
 closeSettingsBtn.addEventListener('click', closeSettings);
 settingsSaveBtn.addEventListener('click', saveSettingsFromUI);
@@ -586,6 +797,7 @@ addGroupBtn.addEventListener('click', () => addGroupToUI());
 resultBackBtn.addEventListener('click', () => showView('main'));
 copyTableImageBtn?.addEventListener('click', copyTableAsPng);
 saveTableImageBtn?.addEventListener('click', saveTableAsPng);
+themeModeSelect?.addEventListener('change', (event) => applyTheme(event.target.value));
 
 holdViewToggle?.addEventListener('change', (event) => {
   setHoldViewEnabled(Boolean(event.target.checked));
@@ -606,6 +818,7 @@ function handlePopupQueryActions() {
 }
 
 async function init() {
+  applyTheme(getThemePreference());
   await loadInputs();
 
   if (handlePopupQueryActions()) {
