@@ -49,6 +49,16 @@
           <input id="settings-dst-toggle" type="checkbox" />
         </label>
 
+        <label class="settings-priority-field" for="settings-priority-locations">
+          Always priority locations
+          <textarea
+            id="settings-priority-locations"
+            rows="3"
+            placeholder="Examples: put, prm, mez"
+          ></textarea>
+        </label>
+        <p class="helper">Rows with a current location containing any of these names are always included.</p>
+
         <div id="groups-list" class="groups-list"></div>
 
         <button id="add-group" type="button" class="secondary">Add Column</button>

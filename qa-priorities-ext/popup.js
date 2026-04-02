@@ -13,11 +13,12 @@ const THEME_STORAGE_KEY = 'qa-priorities-theme-v1';
 const DEFAULT_SETTINGS = {
   daylightSavingsAdjustment: false,
   groups: [
-    { title: 'pallets', values: ['a', 'b', 'c', 'lud', 'prm', 'slp'] },
-    { title: 'efg', values: ['e', 'f', 'g', 'gft', 'hvc', 'hwk', 'hvb'] },
-    { title: 'hjkl', values: ['h', 'j', 'k', 'l'] },
-    { title: 'mnst', values: ['m', 'n', 's', 't', 'mez'] },
+    { title: 'Pallets', values: ['a', 'b', 'c', 'lud', 'prm', 'slp'] },
+    { title: 'E-G', values: ['e', 'f', 'g', 'gft', 'hvc', 'hwk', 'hvb', 'put'] },
+    { title: 'H-K', values: ['h', 'j', 'k'] },
+    { title: 'L-T', values: ['l', 'm', 'n', 's', 't', 'mez'] },
   ],
+  priorityLocations: ['put'],
 };
 
 const views = {
@@ -37,6 +38,7 @@ const addGroupBtn = document.getElementById('add-group');
 const groupsList = document.getElementById('groups-list');
 const themeModeSelect = document.getElementById('theme-mode');
 const settingsDstToggle = document.getElementById('settings-dst-toggle');
+const settingsPriorityLocationsInput = document.getElementById('settings-priority-locations');
 
 let tasksState = [];
 let settingsState = loadSettings();
@@ -99,6 +101,10 @@ function normalizeSettings(config) {
     : [];
 
   const daylightSavingsAdjustment = Boolean(config?.daylightSavingsAdjustment);
+  const priorityLocations = normalizeGroupValues(config?.priorityLocations);
+  const effectivePriorityLocations = priorityLocations.length
+    ? priorityLocations
+    : normalizeGroupValues(DEFAULT_SETTINGS.priorityLocations);
 
   if (!groups.length) {
     return {
@@ -107,10 +113,11 @@ function normalizeSettings(config) {
         title: group.title,
         values: normalizeGroupValues(group.values),
       })),
+      priorityLocations: effectivePriorityLocations,
     };
   }
 
-  return { daylightSavingsAdjustment, groups };
+  return { daylightSavingsAdjustment, groups, priorityLocations: effectivePriorityLocations };
 }
 
 function loadSettings() {
@@ -147,6 +154,9 @@ function parseGroupValues(raw) {
 function populateSettingsUI(config) {
   groupsList.replaceChildren();
   settingsDstToggle.checked = Boolean(config.daylightSavingsAdjustment);
+  if (settingsPriorityLocationsInput) {
+    settingsPriorityLocationsInput.value = (config.priorityLocations || []).join(', ');
+  }
   config.groups.forEach((group) => {
     addGroupToUI(group.title, group.values);
   });
@@ -352,6 +362,7 @@ function getSettingsFromUI() {
   });
   return {
     daylightSavingsAdjustment: Boolean(settingsDstToggle?.checked),
+    priorityLocations: parseGroupValues(settingsPriorityLocationsInput?.value),
     groups,
   };
 }
@@ -671,6 +682,7 @@ async function importFile(file) {
   const rows = await readXlsxRows(file);
   const result = extractPrioritiesRows(rows, {
     daylightSavingsAdjustment: settingsState.daylightSavingsAdjustment,
+    priorityLocations: settingsState.priorityLocations,
   });
   tasksState = result.tasks;
   await persistAndRender(

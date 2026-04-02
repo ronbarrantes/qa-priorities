@@ -12,6 +12,8 @@
     'Current Location',
     'Container Tag',
   ];
+  const ALWAYS_PRIORITY_LOCATIONS_COLUMN = 'Always priority locations';
+  const LEGACY_PRIORITY_LOCATIONS_COLUMN = 'Priority locations';
 
   const TRACKED_TAGS = new Set([
     'QA_HOLD_PICKING',
@@ -52,6 +54,26 @@
 
   function getColumnIndex(headers, columnName) {
     return (headers || []).findIndex((header) => String(header || '').trim() === columnName);
+  }
+
+  function normalizeLocationKey(value) {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function parsePriorityLocationNames(rawValue) {
+    return String(rawValue || '')
+      .split(/[\n,;|]+/)
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((value) => normalizeLocationKey(value));
+  }
+
+  function hasPriorityLocationName(location, priorityLocationNames) {
+    const locationKey = normalizeLocationKey(location);
+    if (!locationKey) return false;
+    return (priorityLocationNames || []).some(
+      (priorityName) => priorityName && locationKey.includes(normalizeLocationKey(priorityName)),
+    );
   }
 
   function parseCutTime(raw) {
@@ -112,15 +134,34 @@
     const qtyIdx = getColumnIndex(headers, 'Quantity');
     const locationIdx = getColumnIndex(headers, 'Current Location');
     const tagIdx = getColumnIndex(headers, 'Container Tag');
+    const priorityLocationsIdx =
+      getColumnIndex(headers, ALWAYS_PRIORITY_LOCATIONS_COLUMN) !== -1
+        ? getColumnIndex(headers, ALWAYS_PRIORITY_LOCATIONS_COLUMN)
+        : getColumnIndex(headers, LEGACY_PRIORITY_LOCATIONS_COLUMN);
+
+    const alwaysPriorityLocations = new Set(
+      Array.isArray(options.priorityLocations)
+        ? options.priorityLocations
+            .map((value) => normalizeLocationKey(value))
+            .filter(Boolean)
+        : [],
+    );
+    if (priorityLocationsIdx !== -1) {
+      rows.slice(1).forEach((row) => {
+        parsePriorityLocationNames(row[priorityLocationsIdx]).forEach((locationName) => {
+          alwaysPriorityLocations.add(locationName);
+        });
+      });
+    }
 
     const tasks = [];
 
     rows.slice(1).forEach((row, rowOffset) => {
       const tag = String(row[tagIdx] || '').trim().toUpperCase();
-      if (!TRACKED_TAGS.has(tag)) return;
-
       const location = String(row[locationIdx] || '').trim();
       if (!location) return;
+      const isAlwaysPriorityLocation = hasPriorityLocationName(location, [...alwaysPriorityLocations]);
+      if (!TRACKED_TAGS.has(tag) && !isAlwaysPriorityLocation) return;
 
       const cutTimeRaw = String(row[cutTimeIdx] || '').trim();
       const cutDate = parseCutTime(cutTimeRaw);
@@ -134,6 +175,7 @@
         quantity: String(row[qtyIdx] || '').trim(),
         currentLocation: location,
         containerTag: tag,
+        isAlwaysPriorityLocation,
         cutTimeRaw,
         cutTimeDate: adjustedCutDate,
         cutTimeDisplay: adjustedCutDate ? formatCutTime(adjustedCutDate) : cutTimeRaw,
@@ -160,6 +202,9 @@
     getColumnIndex,
     parseCutTime,
     formatCutTime,
+    normalizeLocationKey,
+    parsePriorityLocationNames,
+    hasPriorityLocationName,
     extractPrioritiesRows,
   };
 });
