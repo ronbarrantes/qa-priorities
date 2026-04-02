@@ -12,8 +12,7 @@
     'Current Location',
     'Container Tag',
   ];
-  const ALWAYS_PRIORITY_LOCATIONS_COLUMN = 'Always priority locations';
-  const LEGACY_PRIORITY_LOCATIONS_COLUMN = 'Priority locations';
+  const PRIORITY_LOCATIONS_COLUMNS = ['Always priority locations', 'Priority locations'];
 
   const TRACKED_TAGS = new Set([
     'QA_HOLD_PICKING',
@@ -134,10 +133,10 @@
     const qtyIdx = getColumnIndex(headers, 'Quantity');
     const locationIdx = getColumnIndex(headers, 'Current Location');
     const tagIdx = getColumnIndex(headers, 'Container Tag');
-    const priorityLocationsIdx =
-      getColumnIndex(headers, ALWAYS_PRIORITY_LOCATIONS_COLUMN) !== -1
-        ? getColumnIndex(headers, ALWAYS_PRIORITY_LOCATIONS_COLUMN)
-        : getColumnIndex(headers, LEGACY_PRIORITY_LOCATIONS_COLUMN);
+    const priorityLocationsIdx = PRIORITY_LOCATIONS_COLUMNS.reduce((foundIdx, columnName) => {
+      if (foundIdx !== -1) return foundIdx;
+      return getColumnIndex(headers, columnName);
+    }, -1);
 
     const alwaysPriorityLocations = new Set(
       Array.isArray(options.priorityLocations)
