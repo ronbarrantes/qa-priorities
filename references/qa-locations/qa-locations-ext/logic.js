@@ -278,43 +278,89 @@
     priorityEntries,
     now = new Date(),
     colorsMode = true,
+    alwaysPriorityLocations = [],
   ) {
     const locationSet = new Set(
       (locations || []).map((loc) => normalizeLocationKey(loc)),
     );
     const toneMap = new Map();
 
+    const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
+
     if (!colorsMode) {
       (priorityEntries || []).forEach((entry) => {
         const location = String(entry?.location || "").trim();
         const key = normalizeLocationKey(location);
         if (!location || !locationSet.has(key)) return;
-        toneMap.set(key, "priority-yellow");
+
+        const cutTimeIso = entry?.cutTime;
+        if (!cutTimeIso) {
+          toneMap.set(key, "priority-yellow");
+          return;
+        }
+
+        const cutMs = new Date(cutTimeIso).getTime();
+        if (Number.isNaN(cutMs) || Number.isNaN(nowMs)) {
+          toneMap.set(key, "priority-yellow");
+          return;
+        }
+
+        const deltaMs = cutMs - nowMs;
+        if (deltaMs <= 12 * 60 * 60 * 1000) {
+          toneMap.set(key, "priority-yellow");
+        } else {
+          toneMap.set(key, "priority-white");
+        }
       });
-      return toneMap;
+    } else {
+      (priorityEntries || []).forEach((entry) => {
+        const location = String(entry?.location || "").trim();
+        const key = normalizeLocationKey(location);
+        if (!location || !locationSet.has(key)) return;
+
+        const cutTimeIso = entry?.cutTime;
+        if (!cutTimeIso) return;
+        const cutMs = new Date(cutTimeIso).getTime();
+        if (Number.isNaN(cutMs) || Number.isNaN(nowMs)) return;
+
+        const deltaMs = cutMs - nowMs;
+        if (deltaMs <= 2 * 60 * 60 * 1000) {
+          toneMap.set(key, "priority-red");
+        } else if (deltaMs <= 5 * 60 * 60 * 1000) {
+          toneMap.set(key, "priority-yellow");
+        } else if (deltaMs <= 12 * 60 * 60 * 1000) {
+          toneMap.set(key, "priority-green");
+        } else {
+          toneMap.set(key, "priority-white");
+        }
+      });
     }
 
-    const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
+    const alwaysPriorityPrefixes = new Set(
+      parseGroupValues(alwaysPriorityLocations).map((value) =>
+        String(value || "").trim().toUpperCase(),
+      ),
+    );
+    if (alwaysPriorityPrefixes.size > 0) {
+      (locations || []).forEach((location) => {
+        const locationText = String(location || "").trim();
+        if (!locationText) return;
+        const zonePrefix = extractLetterPrefix(locationText).toUpperCase();
+        if (!zonePrefix) return;
 
-    (priorityEntries || []).forEach((entry) => {
-      const location = String(entry?.location || "").trim();
-      const key = normalizeLocationKey(location);
-      if (!location || !locationSet.has(key)) return;
+        const isAlwaysPriority = Array.from(alwaysPriorityPrefixes).some(
+          (prefix) => zonePrefix === prefix || zonePrefix.startsWith(prefix),
+        );
+        if (!isAlwaysPriority) return;
 
-      const cutTimeIso = entry?.cutTime;
-      if (!cutTimeIso) return;
-      const cutMs = new Date(cutTimeIso).getTime();
-      if (Number.isNaN(cutMs) || Number.isNaN(nowMs)) return;
-
-      const deltaMs = cutMs - nowMs;
-      if (deltaMs <= 2 * 60 * 60 * 1000) {
-        toneMap.set(key, "priority-red");
-      } else if (deltaMs <= 5 * 60 * 60 * 1000) {
-        toneMap.set(key, "priority-yellow");
-      } else {
-        toneMap.set(key, "priority-green");
-      }
-    });
+        const locationKey = normalizeLocationKey(locationText);
+        const currentTone = toneMap.get(locationKey);
+        if (currentTone && currentTone !== "priority-white") {
+          return;
+        }
+        toneMap.set(locationKey, "priority-yellow");
+      });
+    }
 
     return toneMap;
   }
@@ -342,6 +388,7 @@
         ? Number(config.columnGap)
         : 1,
       colorsMode: config?.colorsMode === true ? true : false,
+      priorityLocations: parseGroupValues(config?.priorityLocations),
     };
   }
 

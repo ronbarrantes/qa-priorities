@@ -199,12 +199,13 @@ describe("output layout", () => {
   test("buildPriorityToneByLocation computes 3 urgency buckets based on now", () => {
     const now = new Date("2026-03-11T20:00:00.000Z");
     const toneMap = buildPriorityToneByLocation(
-      ["A", "B", "C", "D"],
+      ["A", "B", "C", "D", "E"],
       [
         { location: "A", cutTime: "2026-03-11T20:30:00.000Z" },
         { location: "B", cutTime: "2026-03-11T23:00:00.000Z" },
         { location: "C", cutTime: "2026-03-12T05:30:00.000Z" },
         { location: "D", cutTime: "2026-03-11T19:45:00.000Z" },
+        { location: "E", cutTime: "2026-03-12T09:00:00.000Z" },
       ],
       now,
     );
@@ -213,14 +214,16 @@ describe("output layout", () => {
     expect(toneMap.get("B")).toBe("priority-yellow");
     expect(toneMap.get("C")).toBe("priority-green");
     expect(toneMap.get("D")).toBe("priority-red");
+    expect(toneMap.get("E")).toBe("priority-white");
   });
 
-  test("buildPriorityToneByLocation uses yellow for all priorities when colorsMode is off", () => {
+  test("buildPriorityToneByLocation keeps >12h priorities visually white (without dropping priority) when colorsMode is off", () => {
     const toneMap = buildPriorityToneByLocation(
-      ["A", "B", "C"],
+      ["A", "B", "C", "D"],
       [
         { location: "A", cutTime: null },
         { location: "B", cutTime: "2026-03-11T23:00:00.000Z" },
+        { location: "C", cutTime: "2026-03-12T09:00:00.000Z" },
       ],
       new Date("2026-03-11T20:00:00.000Z"),
       false,
@@ -228,6 +231,65 @@ describe("output layout", () => {
 
     expect(toneMap.get("A")).toBe("priority-yellow");
     expect(toneMap.get("B")).toBe("priority-yellow");
-    expect(toneMap.get("C")).toBeUndefined();
+    expect(toneMap.get("C")).toBe("priority-white");
+    expect(toneMap.get("D")).toBeUndefined();
+  });
+
+  test("buildPriorityToneByLocation applies always-priority prefixes when colorsMode is off", () => {
+    const toneMap = buildPriorityToneByLocation(
+      ["SS4:PUT100.A", "SS4:AB100.A"],
+      [{ location: "SS4:AB100.A", cutTime: "2026-03-12T09:00:00.000Z" }],
+      new Date("2026-03-11T20:00:00.000Z"),
+      false,
+      ["put"],
+    );
+
+    expect(toneMap.get("SS4:PUT100.A")).toBe("priority-yellow");
+    expect(toneMap.get("SS4:AB100.A")).toBe("priority-white");
+  });
+
+  test("buildPriorityToneByLocation marks configured priority locations as yellow", () => {
+    const now = new Date("2026-03-11T20:00:00.000Z");
+    const toneMap = buildPriorityToneByLocation(
+      ["SS4:MEZ111.A", "SS4:PRM210.A", "SS4:AB100.A"],
+      [{ location: "SS4:AB100.A", cutTime: "2026-03-11T21:00:00.000Z" }],
+      now,
+      true,
+      ["mez", "prm"],
+    );
+
+    expect(toneMap.get("SS4:MEZ111.A")).toBe("priority-yellow");
+    expect(toneMap.get("SS4:PRM210.A")).toBe("priority-yellow");
+    expect(toneMap.get("SS4:AB100.A")).toBe("priority-red");
+  });
+
+  test("buildPriorityToneByLocation does not downgrade cut-time urgency when always-priority prefixes match", () => {
+    const now = new Date("2026-03-11T20:00:00.000Z");
+    const toneMap = buildPriorityToneByLocation(
+      ["SS4:PUT100.A", "SS4:PUT200.A", "SS4:PUT300.A", "SS4:AB400.A"],
+      [
+        { location: "SS4:PUT100.A", cutTime: "2026-03-11T21:00:00.000Z" },
+        { location: "SS4:PUT200.A", cutTime: "2026-03-12T02:00:00.000Z" },
+        { location: "SS4:PUT300.A", cutTime: "2026-03-12T10:00:00.000Z" },
+        { location: "SS4:AB400.A", cutTime: "2026-03-12T10:00:00.000Z" },
+      ],
+      now,
+      true,
+      ["put"],
+    );
+
+    expect(toneMap.get("SS4:PUT100.A")).toBe("priority-red");
+    expect(toneMap.get("SS4:PUT200.A")).toBe("priority-green");
+    expect(toneMap.get("SS4:PUT300.A")).toBe("priority-yellow");
+    expect(toneMap.get("SS4:AB400.A")).toBe("priority-white");
+  });
+
+  test("normalizeConfig parses priority locations list", () => {
+    const config = normalizeConfig({
+      groups: [{ title: "pallets", values: "a,b,c" }],
+      priorityLocations: "mez, prm yx",
+    });
+
+    expect(config.priorityLocations).toEqual(["mez", "prm", "yx"]);
   });
 });

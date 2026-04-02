@@ -642,3 +642,9 @@ td.priority-green {
   background: #adffad;
   color: #111111;
 }
+
+td.priority-white {
+  background: #ffffff;
+  color: #111111;
+}
+

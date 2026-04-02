@@ -110,6 +110,17 @@
 
         <div id="groups-list" class="groups-list"></div>
 
+        <label for="priority-locations">Priority locations</label>
+        <input
+          id="priority-locations"
+          type="text"
+          placeholder="MEZ, PRM, YX"
+        />
+        <p class="helper">
+          Comma or space separated prefixes. Matching locations are always
+          highlighted yellow when no cut-time urgency color applies.
+        </p>
+
         <button id="add-group" type="button" class="secondary">
           Add Column
         </button>
@@ -148,7 +159,7 @@
 
         <div class="buttons">
           <button id="settings-reset" type="button" class="secondary">
-            Reset
+            Discard Changes
           </button>
           <button id="settings-save" type="button">Save</button>
         </div>
