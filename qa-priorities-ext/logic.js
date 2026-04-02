@@ -12,8 +12,6 @@
     'Current Location',
     'Container Tag',
   ];
-  const PRIORITY_LOCATIONS_COLUMNS = ['Always priority locations', 'Priority locations'];
-
   const TRACKED_TAGS = new Set([
     'QA_HOLD_PICKING',
     'QA_HOLD_PUTAWAY',
@@ -57,14 +55,6 @@
 
   function normalizeLocationKey(value) {
     return String(value || '').trim().toUpperCase();
-  }
-
-  function parsePriorityLocationNames(rawValue) {
-    return String(rawValue || '')
-      .split(/[\n,;|]+/)
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .map((value) => normalizeLocationKey(value));
   }
 
   function hasPriorityLocationName(location, priorityLocationNames) {
@@ -133,11 +123,6 @@
     const qtyIdx = getColumnIndex(headers, 'Quantity');
     const locationIdx = getColumnIndex(headers, 'Current Location');
     const tagIdx = getColumnIndex(headers, 'Container Tag');
-    const priorityLocationsIdx = PRIORITY_LOCATIONS_COLUMNS.reduce((foundIdx, columnName) => {
-      if (foundIdx !== -1) return foundIdx;
-      return getColumnIndex(headers, columnName);
-    }, -1);
-
     const alwaysPriorityLocations = new Set(
       Array.isArray(options.priorityLocations)
         ? options.priorityLocations
@@ -145,13 +130,6 @@
             .filter(Boolean)
         : [],
     );
-    if (priorityLocationsIdx !== -1) {
-      rows.slice(1).forEach((row) => {
-        parsePriorityLocationNames(row[priorityLocationsIdx]).forEach((locationName) => {
-          alwaysPriorityLocations.add(locationName);
-        });
-      });
-    }
 
     const tasks = [];
 
@@ -202,7 +180,6 @@
     parseCutTime,
     formatCutTime,
     normalizeLocationKey,
-    parsePriorityLocationNames,
     hasPriorityLocationName,
     extractPrioritiesRows,
   };
