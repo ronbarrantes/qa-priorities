@@ -680,6 +680,10 @@ async function importFile(file) {
 }
 
 async function init() {
+
+
+	
+
   applyTheme(getThemePreference());
   const saved = await storage.get(STORAGE_KEY);
   if (Array.isArray(saved)) {

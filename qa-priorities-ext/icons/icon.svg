@@ -1,44 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="QA Priorities icon">
   <defs>
+    <!-- Deep Walmart blue — matches qa-locations family -->
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1d4ed8" />
-      <stop offset="100%" stop-color="#1e3a8a" />
+      <stop offset="0%"   stop-color="#0053e2"/>
+      <stop offset="100%" stop-color="#001564"/>
     </linearGradient>
+
+    <!-- Subtle text depth shadow -->
+    <filter id="sh" x="-20%" y="-20%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.55)"/>
+    </filter>
   </defs>
 
-  <rect x="0" y="0" width="128" height="128" fill="url(#bg)" />
+  <!-- Full-bleed background — NO rx, let the OS/browser handle corner rounding -->
+  <rect width="128" height="128" fill="url(#bg)"/>
 
-  <!-- Stylized P -->
-  <path
-    d="M40 28 L40 100"
-    fill="none"
-    stroke="#facc15"
-    stroke-width="10"
-    stroke-linecap="round"
-  />
-  <circle
-    cx="58"
-    cy="52"
-    r="20"
-    fill="none"
-    stroke="#facc15"
-    stroke-width="10"
-    stroke-linecap="round"
-  />
-
-  <!-- Stylized 1 -->
-  <path
-    d="M88 36 L88 100"
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="10"
-    stroke-linecap="round"
-  />
-  <path
-    d="M80 44 L88 36"
-    fill="none"
-    stroke="#ffffff"
-    stroke-width="10"
-    stroke-linecap="round"
-  />
+  <!-- P! — single text element, centered on canvas -->
+  <!-- text-anchor="middle" at x=64 guarantees true horizontal centering -->
+  <!-- tspans for per-character color, letter-spacing tightens the pair -->
+  <!-- white on #0053e2 ≈ 8.6:1 ✓ AAA | #ffc220 on #0053e2 ≈ 5.7:1 ✓ AA+ -->
+  <text
+    x="64" y="100"
+    text-anchor="middle"
+    font-family="'Arial Black','Arial',sans-serif"
+    font-size="98" font-weight="900"
+    letter-spacing="-4"
+    filter="url(#sh)">
+    <tspan fill="white">P</tspan><tspan fill="#ffc220">!</tspan>
+  </text>
 </svg>

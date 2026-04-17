@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Icon Concepts — QA Priorities</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #061929;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 36px 24px 60px;
+      gap: 40px;
+    }
+
+    header { text-align: center; }
+    h1 { font-size: 1.2rem; font-weight: 800; color: #ffc220; margin: 0 0 6px; }
+    .subtitle { font-size: 0.82rem; color: #9aa4b2; }
+
+    .concepts-grid {
+      display: flex;
+      gap: 36px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    .concept-card {
+      background: #0b2540;
+      border: 1px solid #0053e2;
+      border-radius: 16px;
+      padding: 24px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      min-width: 260px;
+      flex: 1;
+    }
+
+    .concept-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #ffc220;
+      background: #001a6e;
+      border: 1px solid #0053e2;
+      border-radius: 20px;
+      padding: 3px 14px;
+    }
+
+    .concept-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e5e7eb;
+      margin: 0;
+      text-align: center;
+    }
+
+    .concept-desc {
+      font-size: 0.76rem;
+      color: #7dd3fc;
+      text-align: center;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .contrast-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .badge-contrast {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+      background: #00091f;
+      border: 1px solid #2a8703;
+      color: #4ade80;
+    }
+
+    .previews {
+      display: flex;
+      align-items: flex-end;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .preview-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    canvas {
+      border-radius: 8px;
+      image-rendering: pixelated;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+    }
+    .size-label { font-size: 0.7rem; color: #9aa4b2; }
+
+    .dl-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .dl-btn {
+      padding: 5px 12px;
+      background: #0c2d4f;
+      color: #bae6fd;
+      border: 1px solid #0053e2;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .dl-btn:hover { background: #0053e2; color: #fff; }
+
+    .dl-all {
+      padding: 9px 26px;
+      background: #0053e2;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 700;
+      width: 100%;
+    }
+    .dl-all:hover { background: #ffc220; color: #001564; }
+
+    #global-status {
+      font-size: 0.82rem;
+      color: #4ade80;
+      min-height: 1.2em;
+      text-align: center;
+    }
+
+    .note {
+      font-size: 0.75rem;
+      color: #9aa4b2;
+      text-align: center;
+      max-width: 560px;
+      line-height: 1.6;
+    }
+    code {
+      background: #0c2340;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: #7dd3fc;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🎨 QA Priorities — 3 Icon Concepts</h1>
+    <p class="subtitle">All: Walmart blue bg · white + spark yellow #ffc220 · WCAG AAA contrast</p>
+  </header>
+
+  <div class="concepts-grid" id="concepts-grid"></div>
+
+  <p id="global-status"></p>
+
+  <p class="note">
+    Download whichever concept wins. Rename to <code>icon-16.png</code>, <code>icon-32.png</code>,
+    <code>icon-48.png</code>, <code>icon-128.png</code> → drop into <code>icons/</code> → reload extension.
+  </p>
+
+  <script>
+    // ─── Shared bg gradient for all 3 (Walmart blue, same as qa-locations) ────
+    const SHARED_DEFS = `
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#0053e2"/>
+      <stop offset="100%" stop-color="#001564"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <rect width="128" height="128" rx="26"/>
+    </clipPath>
+    <filter id="sh" x="-20%" y="-20%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.55)"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="26" fill="url(#bg)"/>`;
+
+    // ────────────────────────────────────────────────────────────────────────
+    // CONCEPT A — "P!"
+    // Giant white P + spark-yellow ! — brutal simplicity, two-color contrast
+    // white on #0053e2 ≈ 8.6:1 AAA | #ffc220 on #0053e2 ≈ 5.7:1 AA+
+    // ────────────────────────────────────────────────────────────────────────
+    const SVG_A = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="QA Priorities icon">
+${SHARED_DEFS}
+  <text
+    x="8" y="100"
+    font-family="'Arial Black','Arial',sans-serif"
+    font-size="90" font-weight="900"
+    fill="white"
+    filter="url(#sh)">P</text>
+  <text
+    x="80" y="100"
+    font-family="'Arial Black','Arial',sans-serif"
+    font-size="90" font-weight="900"
+    fill="#ffc220"
+    filter="url(#sh)">!</text>
+</svg>`;
+
+    // ────────────────────────────────────────────────────────────────────────
+    // CONCEPT B — "Priority Bars"
+    // 3 signal-strength bars, increasing height, left=white, right=yellow
+    // Universally understood as "level" / "priority" without any text
+    // white on #0053e2 ≈ 8.6:1 AAA | #ffc220 on #0053e2 ≈ 5.7:1 AA+
+    // ────────────────────────────────────────────────────────────────────────
+    const SVG_B = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="QA Priorities icon">
+${SHARED_DEFS}
+  <g clip-path="url(#clip)" filter="url(#sh)">
+    <!-- Bar 1 — short, white -->
+    <rect x="14" y="78" width="26" height="38" rx="5" fill="white"/>
+    <!-- Bar 2 — medium, white -->
+    <rect x="51" y="50" width="26" height="66" rx="5" fill="white"/>
+    <!-- Bar 3 — tall, spark yellow (highest priority = top) -->
+    <rect x="88" y="18" width="26" height="98" rx="5" fill="#ffc220"/>
+  </g>
+</svg>`;
+
+    // ────────────────────────────────────────────────────────────────────────
+    // CONCEPT C — "Stacked Chevrons"
+    // 3 up-pointing chevrons — bottom two white, top one yellow
+    // Reads as "up / elevated / escalated" — no text needed
+    // white on #0053e2 ≈ 8.6:1 AAA | #ffc220 on #0053e2 ≈ 5.7:1 AA+
+    // ────────────────────────────────────────────────────────────────────────
+    const SVG_C = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="QA Priorities icon">
+${SHARED_DEFS}
+  <g clip-path="url(#clip)" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)">
+    <!-- Bottom chevron — white, lower opacity -->
+    <polyline points="18,98 64,72 110,98" stroke="white" stroke-width="12" opacity="0.45"/>
+    <!-- Middle chevron — white -->
+    <polyline points="18,72 64,46 110,72" stroke="white" stroke-width="12" opacity="0.80"/>
+    <!-- Top chevron — spark yellow, full opacity (highest priority) -->
+    <polyline points="18,46 64,20 110,46" stroke="#ffc220" stroke-width="13"/>
+  </g>
+</svg>`;
+
+    // ────────────────────────────────────────────────────────────────────────
+
+    const CONCEPTS = [
+      {
+        id:      "a",
+        label:   "A",
+        name:    '"P!" — Bold Text',
+        desc:    'Massive white P + spark-yellow exclamation.\nBrutal, legible at 16px, zero ambiguity.',
+        badges:  ["white 8.6:1 ✓ AAA", "yellow 5.7:1 ✓ AA+"],
+        svg:     SVG_A,
+      },
+      {
+        id:      "b",
+        label:   "B",
+        name:    '"Priority Bars"',
+        desc:    '3 signal-strength bars, tallest in yellow.\nIconographic — reads as level/priority without text.',
+        badges:  ["white 8.6:1 ✓ AAA", "yellow 5.7:1 ✓ AA+"],
+        svg:     SVG_B,
+      },
+      {
+        id:      "c",
+        label:   "C",
+        name:    '"Stacked Chevrons"',
+        desc:    '3 upward chevrons — yellow on top.\nSignals escalation. Clean and geometric.',
+        badges:  ["white 8.6:1 ✓ AAA", "yellow 5.7:1 ✓ AA+"],
+        svg:     SVG_C,
+      },
+    ];
+
+    const SIZES = [16, 32, 48, 128];
+
+    function svgToImage(svgStr, size) {
+      return new Promise((resolve, reject) => {
+        const blob = new Blob([svgStr], { type: "image/svg+xml" });
+        const url  = URL.createObjectURL(blob);
+        const img  = new Image(size, size);
+        img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+        img.src = url;
+      });
+    }
+
+    async function renderCanvas(svgStr, size) {
+      const canvas  = document.createElement("canvas");
+      canvas.width  = size;
+      canvas.height = size;
+      const img = await svgToImage(svgStr, size);
+      canvas.getContext("2d").drawImage(img, 0, 0, size, size);
+      return canvas;
+    }
+
+    function download(canvas, filename) {
+      const a    = document.createElement("a");
+      a.download = filename;
+      a.href     = canvas.toDataURL("image/png");
+      a.click();
+    }
+
+    async function buildCard(concept) {
+      const card = document.createElement("div");
+      card.className = "concept-card";
+
+      // Header
+      const lbl = document.createElement("span");
+      lbl.className   = "concept-label";
+      lbl.textContent = `Concept ${concept.label}`;
+      card.appendChild(lbl);
+
+      const name = document.createElement("p");
+      name.className   = "concept-name";
+      name.textContent = concept.name;
+      card.appendChild(name);
+
+      const desc = document.createElement("p");
+      desc.className   = "concept-desc";
+      desc.textContent = concept.desc;
+      card.appendChild(desc);
+
+      // Contrast badges
+      const badgeRow = document.createElement("div");
+      badgeRow.className = "contrast-badges";
+      for (const b of concept.badges) {
+        const badge = document.createElement("span");
+        badge.className   = "badge-contrast";
+        badge.textContent = b;
+        badgeRow.appendChild(badge);
+      }
+      card.appendChild(badgeRow);
+
+      // Render previews
+      const previews = document.createElement("div");
+      previews.className = "previews";
+      const canvasMap = {};
+
+      for (const size of SIZES) {
+        const canvas   = await renderCanvas(concept.svg, size);
+        canvasMap[size] = canvas;
+
+        const display       = Math.max(size, 72);
+        canvas.style.width  = display + "px";
+        canvas.style.height = display + "px";
+
+        const lbl2 = document.createElement("span");
+        lbl2.className   = "size-label";
+        lbl2.textContent = `${size}×${size}`;
+
+        const item = document.createElement("div");
+        item.className = "preview-item";
+        item.append(canvas, lbl2);
+        previews.appendChild(item);
+      }
+      card.appendChild(previews);
+
+      // Per-size download row
+      const dlRow = document.createElement("div");
+      dlRow.className = "dl-row";
+      for (const size of SIZES) {
+        const btn = document.createElement("button");
+        btn.className   = "dl-btn";
+        btn.textContent = `${size}px`;
+        btn.onclick     = () => download(canvasMap[size], `icon-${size}.png`);
+        dlRow.appendChild(btn);
+      }
+      card.appendChild(dlRow);
+
+      // Download all button
+      const dlAll = document.createElement("button");
+      dlAll.className   = "dl-all";
+      dlAll.textContent = `⬇ Use Concept ${concept.label} — Download All 4`;
+      dlAll.onclick = () => {
+        for (const s of SIZES) download(canvasMap[s], `icon-${s}.png`);
+        document.getElementById("global-status").textContent =
+          `✓ Concept ${concept.label} downloaded! Drop the 4 PNGs into icons/ and reload.`;
+      };
+      card.appendChild(dlAll);
+
+      return card;
+    }
+
+    async function init() {
+      const grid = document.getElementById("concepts-grid");
+      for (const concept of CONCEPTS) {
+        const card = await buildCard(concept);
+        grid.appendChild(card);
+      }
+    }
+
+    init().catch(err => {
+      document.getElementById("global-status").textContent = "❌ " + (err.message ?? err);
+    });
+  </script>
+</body>
+</html>

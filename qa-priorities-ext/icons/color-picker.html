@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>P1 Icon — Color Picker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px 60px;
+      margin: 0;
+      gap: 32px;
+    }
+    h1   { font-size: 1.1rem; font-weight: 700; color: #94a3b8; margin: 0; }
+    p    { margin: 0; font-size: 0.85rem; color: #64748b; text-align: center; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 880px;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 14px;
+      padding: 20px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+    .card:hover { border-color: #60a5fa; transform: translateY(-2px); }
+    .card.selected { border-color: #ffc220; background: #1c2340; }
+
+    .sizes {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    }
+    .size-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    canvas { image-rendering: pixelated; border-radius: 4px; }
+    .size-label { font-size: 0.65rem; color: #64748b; }
+
+    .variant-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      text-align: center;
+    }
+    .variant-desc {
+      font-size: 0.72rem;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .dl-btn {
+      padding: 6px 14px;
+      background: #1e3a8a;
+      color: #bfdbfe;
+      border: 1px solid #2563eb;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+      width: 100%;
+    }
+    .dl-btn:hover { background: #2563eb; color: #fff; }
+
+    .selected-badge {
+      display: none;
+      font-size: 0.7rem;
+      color: #ffc220;
+      font-weight: 700;
+    }
+    .card.selected .selected-badge { display: block; }
+
+    #status {
+      font-size: 0.82rem;
+      color: #34d399;
+      min-height: 1em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📍 QA Priorities — P1 Icon Color Picker</h1>
+  <p>Click a card to select it, or hit Download on any variant to grab the 4 PNGs.<br/>
+     Filenames come out as <code style="background:#1e293b;padding:1px 5px;border-radius:4px;color:#94a3b8">icon-16.png</code> etc. — matching the manifest exactly.</p>
+
+  <div class="grid" id="grid"></div>
+  <p id="status"></p>
+
+  <script>
+    // ─── P1 SVG factory ──────────────────────────────────────────────────────
+    // bg1/bg2   = background gradient stops
+    // pCol      = colour of the large "P"
+    // oneCol    = colour of the superscript "1"
+    // ruleCol   = dividing rule opacity/colour
+    function makeSVG({ bg1, bg2, pCol, oneCol }) {
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="QA Priorities P1 icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="${bg1}"/>
+      <stop offset="100%" stop-color="${bg2}"/>
+    </linearGradient>
+    <radialGradient id="vig" cx="50%" cy="40%" r="70%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.07)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.25)"/>
+    </radialGradient>
+    <filter id="ts" x="-20%" y="-20%" width="160%" height="160%">
+      <feDropShadow dx="1" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.4)"/>
+    </filter>
+    <clipPath id="clip">
+      <rect width="128" height="128" rx="26"/>
+    </clipPath>
+  </defs>
+  <rect width="128" height="128" rx="26" fill="url(#bg)"/>
+  <rect width="128" height="128" rx="26" fill="url(#vig)"/>
+  <g clip-path="url(#clip)" stroke="white" stroke-width="1" opacity="0.05">
+    <line x1="-10" y1="128" x2="128" y2="-10"/>
+    <line x1="20"  y1="128" x2="158" y2="-10"/>
+    <line x1="50"  y1="128" x2="188" y2="-10"/>
+    <line x1="-40" y1="128" x2="98"  y2="-10"/>
+    <line x1="-70" y1="128" x2="68"  y2="-10"/>
+  </g>
+  <text x="14" y="100"
+    font-family="'Arial Black','Arial',sans-serif"
+    font-size="92" font-weight="900"
+    fill="${pCol}" filter="url(#ts)">P</text>
+  <text x="83" y="62"
+    font-family="'Arial Black','Arial',sans-serif"
+    font-size="52" font-weight="900"
+    fill="${oneCol}" filter="url(#ts)">1</text>
+  <line x1="82" y1="24" x2="82" y2="70"
+    stroke="rgba(255,255,255,0.2)" stroke-width="1.5"
+    stroke-linecap="round" clip-path="url(#clip)"/>
+</svg>`;
+    }
+
+    // ─── Colour variants ─────────────────────────────────────────────────────
+    const VARIANTS = [
+      {
+        name: "Dark Teal",
+        desc: "Deep teal → near-black\nWhite P · Yellow 1",
+        bg1: "#0f766e", bg2: "#042f2e",
+        pCol: "#ffffff", oneCol: "#ffc220",
+      },
+      {
+        name: "Medium Teal",
+        desc: "Brighter teal → dark teal\nWhite P · Yellow 1",
+        bg1: "#0d9488", bg2: "#134e4a",
+        pCol: "#ffffff", oneCol: "#ffc220",
+      },
+      {
+        name: "Burnt Orange",
+        desc: "Warm orange → deep brown\nWhite P · Yellow 1",
+        bg1: "#ea580c", bg2: "#431407",
+        pCol: "#ffffff", oneCol: "#fef08a",
+      },
+      {
+        name: "Amber",
+        desc: "Golden amber → dark brown\nWhite P · Light yellow 1",
+        bg1: "#d97706", bg2: "#451a03",
+        pCol: "#ffffff", oneCol: "#fef9c3",
+      },
+      {
+        name: "Reversed — Yellow bg",
+        desc: "Spark yellow → amber bg\nNavy P · Navy 1",
+        bg1: "#ffc220", bg2: "#b45309",
+        pCol: "#0c1e4a", oneCol: "#001a6e",
+      },
+      {
+        name: "Reversed — Blue on Yellow",
+        desc: "Bright yellow → gold bg\nWalmart blue P · Dark 1",
+        bg1: "#fde68a", bg2: "#fbbf24",
+        pCol: "#0053e2", oneCol: "#001a6e",
+      },
+      {
+        name: "Indigo",
+        desc: "Deep indigo → near-black\nWhite P · Yellow 1",
+        bg1: "#4f46e5", bg2: "#1e1b4b",
+        pCol: "#ffffff", oneCol: "#ffc220",
+      },
+      {
+        name: "Slate + Spark",
+        desc: "Dark slate → charcoal bg\nSpark yellow P · White 1",
+        bg1: "#334155", bg2: "#0f172a",
+        pCol: "#ffc220", oneCol: "#ffffff",
+      },
+    ];
+
+    const PREVIEW_SIZES = [16, 48, 128];
+    const DL_SIZES      = [16, 32, 48, 128];
+
+    function svgToImage(svgStr, size) {
+      return new Promise((resolve, reject) => {
+        const blob = new Blob([svgStr], { type: "image/svg+xml" });
+        const url  = URL.createObjectURL(blob);
+        const img  = new Image(size, size);
+        img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+        img.src = url;
+      });
+    }
+
+    async function renderCanvas(svgStr, size) {
+      const canvas  = document.createElement("canvas");
+      canvas.width  = size;
+      canvas.height = size;
+      const img = await svgToImage(svgStr, size);
+      canvas.getContext("2d").drawImage(img, 0, 0, size, size);
+      return canvas;
+    }
+
+    function download(canvas, filename) {
+      const a = document.createElement("a");
+      a.download = filename;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    }
+
+    async function downloadAll(svgStr, label) {
+      document.getElementById("status").textContent = `Generating ${label} PNGs…`;
+      for (const size of DL_SIZES) {
+        const c = await renderCanvas(svgStr, size);
+        download(c, `icon-${size}.png`);
+      }
+      document.getElementById("status").textContent =
+        `✓ ${label} — 4 PNGs downloaded! Move them into icons/ and reload the extension.`;
+    }
+
+    async function init() {
+      const grid = document.getElementById("grid");
+
+      for (const v of VARIANTS) {
+        const svg  = makeSVG(v);
+        const card = document.createElement("div");
+        card.className = "card";
+
+        // Preview canvases: 16, 48, 128
+        const sizesRow = document.createElement("div");
+        sizesRow.className = "sizes";
+
+        const displaySizes = { 16: 24, 48: 48, 128: 96 };
+        for (const size of PREVIEW_SIZES) {
+          const c    = await renderCanvas(svg, size);
+          const disp = displaySizes[size];
+          c.style.width  = disp + "px";
+          c.style.height = disp + "px";
+
+          const lbl = document.createElement("span");
+          lbl.className   = "size-label";
+          lbl.textContent = `${size}px`;
+
+          const wrap = document.createElement("div");
+          wrap.className = "size-wrap";
+          wrap.append(c, lbl);
+          sizesRow.append(wrap);
+        }
+
+        const badge = document.createElement("span");
+        badge.className   = "selected-badge";
+        badge.textContent = "★ selected";
+
+        const name = document.createElement("div");
+        name.className   = "variant-name";
+        name.textContent = v.name;
+
+        const desc = document.createElement("div");
+        desc.className   = "variant-desc";
+        desc.textContent = v.desc;
+
+        const btn = document.createElement("button");
+        btn.className   = "dl-btn";
+        btn.textContent = "⬇ Download this one";
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          downloadAll(svg, v.name);
+        };
+
+        card.onclick = () => {
+          document.querySelectorAll(".card").forEach(c => c.classList.remove("selected"));
+          card.classList.add("selected");
+        };
+
+        card.append(sizesRow, badge, name, desc, btn);
+        grid.append(card);
+      }
+    }
+
+    init().catch(err => {
+      document.getElementById("status").textContent = "❌ " + (err.message ?? err);
+    });
+  </script>
+</body>
+</html>

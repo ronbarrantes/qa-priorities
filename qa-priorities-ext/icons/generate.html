@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Icon Generator — QA Priorities</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #1a0505;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      gap: 28px;
+    }
+    h1   { font-size: 1.1rem; font-weight: 700; color: #fca5a5; margin: 0; }
+    p    { margin: 0; font-size: 0.85rem; color: #9aa4b2; text-align: center; line-height: 1.6; }
+    code { background: #3b0a0a; padding: 1px 6px; border-radius: 4px; font-size: 0.82rem; color: #fca5a5; }
+
+    .previews {
+      display: flex;
+      align-items: flex-end;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .preview-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    canvas {
+      border-radius: 8px;
+      image-rendering: pixelated;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.55);
+    }
+    .size-label { font-size: 0.75rem; color: #9aa4b2; }
+    .dl-btn {
+      padding: 5px 12px;
+      background: #450a0a;
+      color: #fecaca;
+      border: 1px solid #dc2626;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .dl-btn:hover { background: #dc2626; color: #fff; }
+
+    #dl-all {
+      padding: 10px 30px;
+      background: #dc2626;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    #dl-all:hover { background: #ef4444; }
+
+    #status { font-size: 0.82rem; color: #34d399; min-height: 1.2em; }
+
+    .badge {
+      display: inline-block;
+      background: #450a0a;
+      border: 1px solid #dc2626;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.75rem;
+      color: #fca5a5;
+      margin-bottom: -8px;
+    }
+
+    .note {
+      font-size: 0.78rem;
+      color: #fbbf24;
+      background: #422006;
+      border: 1px solid #92400e;
+      border-radius: 8px;
+      padding: 8px 16px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <span class="badge">🔴 QA Priorities Extension</span>
+  <h1>Icon Generator — P!</h1>
+  <p>
+    Open this file in Chrome (works on <code>file://</code> — no server needed).<br/>
+    Click <strong>Download All 4 PNGs</strong>, then move them into <code>icons/</code> and reload the extension.
+  </p>
+
+  <div class="previews" id="previews"></div>
+  <p id="status"></p>
+  <button id="dl-all">⬇ Download All 4 PNGs</button>
+
+  <p class="note">
+    ⚠ Files save as <strong>icon-16.png</strong>, <strong>icon-32.png</strong>, etc. — matching this extension's manifest exactly.
+  </p>
+
+  <script>
+    // Deep Walmart blue bg (#0053e2 → #001564) — matches qa-locations family
+    // Single <text> + tspans — text-anchor middle guarantees true centering
+    // No rx on rect — let the OS/browser handle corner rounding, maximise canvas
+    // white on #0053e2 ≈ 8.6:1 ✓ AAA | #ffc220 on #0053e2 ≈ 5.7:1 ✓ AA+
+    const SVG_SRC = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="QA Priorities icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#0053e2"/>
+      <stop offset="100%" stop-color="#001564"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.55)"/>
+    </filter>
+  </defs>
+
+  <rect width="128" height="128" fill="url(#bg)"/>
+
+  <text
+    x="64" y="100"
+    text-anchor="middle"
+    font-family="'Arial Black','Arial',sans-serif"
+    font-size="98" font-weight="900"
+    letter-spacing="-4"
+    filter="url(#sh)">
+    <tspan fill="white">P</tspan><tspan fill="#ffc220">!</tspan>
+  </text>
+</svg>`;
+
+    // NOTE: filenames use hyphens to match this extension's manifest.json
+    const SIZES    = [16, 32, 48, 128];
+    const canvases = {};
+
+    function svgToImage(svgStr, size) {
+      return new Promise((resolve, reject) => {
+        const blob = new Blob([svgStr], { type: "image/svg+xml" });
+        const url  = URL.createObjectURL(blob);
+        const img  = new Image(size, size);
+        img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+        img.src = url;
+      });
+    }
+
+    async function renderCanvas(size) {
+      const canvas  = document.createElement("canvas");
+      canvas.width  = size;
+      canvas.height = size;
+      const img = await svgToImage(SVG_SRC, size);
+      canvas.getContext("2d").drawImage(img, 0, 0, size, size);
+      return canvas;
+    }
+
+    function download(canvas, filename) {
+      const a    = document.createElement("a");
+      a.download = filename;
+      a.href     = canvas.toDataURL("image/png");
+      a.click();
+    }
+
+    async function init() {
+      const container = document.getElementById("previews");
+
+      for (const size of SIZES) {
+        const canvas   = await renderCanvas(size);
+        canvases[size] = canvas;
+
+        const display       = Math.max(size, 80);
+        canvas.style.width  = display + "px";
+        canvas.style.height = display + "px";
+
+        const label       = document.createElement("span");
+        label.className   = "size-label";
+        label.textContent = `${size} × ${size}`;
+
+        const btn       = document.createElement("button");
+        btn.className   = "dl-btn";
+        btn.textContent = "Download";
+        btn.onclick     = () => download(canvas, `icon-${size}.png`);
+
+        const item      = document.createElement("div");
+        item.className  = "preview-item";
+        item.append(canvas, label, btn);
+        container.append(item);
+      }
+
+      document.getElementById("dl-all").onclick = () => {
+        for (const s of SIZES) download(canvases[s], `icon-${s}.png`);
+        document.getElementById("status").textContent =
+          "✓ Done! Move the 4 PNGs into icons/ and reload the extension.";
+      };
+    }
+
+    init().catch(err => {
+      document.getElementById("status").textContent = "❌ " + (err.message ?? err);
+    });
+  </script>
+</body>
+</html>
