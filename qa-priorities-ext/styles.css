@@ -288,6 +288,12 @@ select:focus {
   margin: 0;
 }
 
+.settings-priority-field {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
 .settings-theme select {
   margin-top: 0;
 }
